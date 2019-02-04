@@ -23,6 +23,12 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+# Project
+/bugs
+*.txt
+*.json
+*.csv
+*.pkl
 MANIFEST
 
 # PyInstaller
