@@ -26,6 +26,7 @@ import _pickle as pickle
 
 from multiprocessing import Pool
 import multiprocessing
+import os
 
 DIR = ''
 
@@ -184,32 +185,32 @@ def dump_vocabulary(bugs, word_vocab, bug_dir):
 
 def processing_dump(bugs, word_vocab):
     #clear_output()
-    cpu = 2
+    cpu = os.cpu_count() - 1
     pool = Pool(processes=cpu) # start 4 worker processes
     bug_dir = os.path.join(DIR, 'bugs')
-    #print("Starting the slice ...")
-    # works = []
-    # n = len(bugs) // cpu
-    # n = 1 if n == 0 else n
-    # sliced = []
-    # pos_end = n
-    # end = len(bugs)
-    # for i in range(cpu):
-    #     pos_end = end if pos_end>=end else pos_end
-    #     pos_end = end if (i+1) == cpu and pos_end < end else pos_end
-    #     sliced.append(bugs[i*n:pos_end])
-    #     pos_end += n
+    print("Starting the slice ...")
+    works = []
+    n = len(bugs) // cpu
+    n = 1 if n == 0 else n
+    sliced = []
+    pos_end = n
+    end = len(bugs)
+    for i in range(cpu):
+        pos_end = end if pos_end>=end else pos_end
+        pos_end = end if (i+1) == cpu and pos_end < end else pos_end
+        sliced.append(bugs[i*n:pos_end])
+        pos_end += n
 
-    # print("Slicing done!")
-    #for s in sliced:
-        #if len(s) > 0:
-            #works.append(pool.apply_async(dump_vocabulary, (s, bug_dir, )))
+    print("Slicing done!")
+    for s in sliced:
+        if len(s) > 0:
+            works.append(pool.apply_async(dump_vocabulary, (s, word_vocab, bug_dir, )))
             #dump_vocabulary(s, bug_dir)
 
-    dump_vocabulary(bugs, word_vocab, bug_dir)
+    print("Executing the works...")
+    res = [w.get() for w in works]
 
-    #print("Executing the works...")
-    #res = [w.get() for w in works]
+    # dump_vocabulary(bugs, word_vocab, bug_dir)
 
     print("All done!")
 
