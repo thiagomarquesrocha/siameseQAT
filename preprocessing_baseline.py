@@ -20,6 +20,7 @@ import _pickle as pickle
 
 from multiprocessing import Pool
 import multiprocessing
+import sys
 
 class Preprocess:
 
@@ -254,7 +255,38 @@ class Preprocess:
       print("Saved!")
 
 def main():
-    preprocessing = Preprocess('eclipse', 'eclipse', 'eclipse_pairs')
+
+    try:
+      _, dataset = sys.argv
+    except:
+      print('###### Missing the dataset to be processed #########')
+      print("Ex: $ python script.py {eclipse, eclipse_small, netbeans, openoffice} ")
+      exit(1)
+    
+    op = {
+      'eclipse' : {
+        'DATASET' : 'eclipse',
+        'DOMAIN' : 'eclipse',
+        'PAIRS' : 'eclipse_pairs'
+      },
+      'eclipse_small' : {
+        'DATASET' : 'eclipse',
+        'DOMAIN' : 'eclipse_small',
+        'PAIRS' : 'eclipse_small_pairs'
+      },
+      'netbeans' : {
+        'DATASET' : 'netbeans',
+        'DOMAIN' : 'netbeans',
+        'PAIRS' : 'netbeans_pairs'
+      },
+      'openoffice' : {
+        'DATASET' : 'openoffice',
+        'DOMAIN' : 'openOffice',
+        'PAIRS' : 'openOffice_pairs'
+      }
+    }
+
+    preprocessing = Preprocess(op[dataset]['DATASET'], op[dataset]['DOMAIN'], op[dataset]['PAIRS'])
     preprocessing.run()
 
 if __name__ == '__main__':
