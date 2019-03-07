@@ -97,7 +97,7 @@ class Baseline:
         return valid_a, valid_b, valid_sim
 
     @staticmethod
-    def load_model(name):
+    def load_model(DIR, name):
         m_dir = os.path.join(DIR, 'modelos')
         # load json and create model
         json_file = open(os.path.join(m_dir, "model_{}.json".format(name)), 'r')
@@ -110,7 +110,7 @@ class Baseline:
         return loaded_model
 
     @staticmethod
-    def save_model(model, name):
+    def save_model(DIR, model, name):
         m_dir = os.path.join(DIR, 'modelos')
         if not os.path.exists(m_dir):
             os.mkdir(m_dir)
@@ -419,8 +419,7 @@ class Baseline:
             print("similar =", str(sim))
             print("########################")
 
-    @staticmethod
-    def word_index_count(corpus):
+    def word_index_count(self, corpus, MAX_NB_WORDS):
         tokenizer = Tokenizer(num_words=MAX_NB_WORDS)
         tokenizer.fit_on_texts(corpus)
         word_index = tokenizer.word_index
@@ -428,7 +427,7 @@ class Baseline:
         
         return word_index
 
-    def generating_embed(self, GLOVE_DIR, EMBEDDING_DIM):
+    def generating_embed(self, GLOVE_DIR, EMBEDDING_DIM, MAX_NB_WORDS):
         embeddings_index = {}
         f = open(os.path.join(GLOVE_DIR, 'glove.42B.300d.txt'), 'rb')
         for line in tqdm(f):
@@ -440,11 +439,11 @@ class Baseline:
 
         print('Total %s word vectors in Glove 42B 300d.' % len(embeddings_index))
 
-        word_index = Baseline.word_index_count(corpus)
+        self.word_index = self.word_index_count(self.corpus, MAX_NB_WORDS)
 
-        embedding_matrix = np.random.random((len(word_index) + 1, EMBEDDING_DIM))
-        for word, i in tqdm(word_index.items()):
+        self.embedding_matrix = np.random.random((len(self.word_index) + 1, EMBEDDING_DIM))
+        for word, i in tqdm(self.word_index.items()):
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
                 # words not found in embedding index will be all-zeros.
-                embedding_matrix[i] = embedding_vector
+                self.embedding_matrix[i] = embedding_vector
