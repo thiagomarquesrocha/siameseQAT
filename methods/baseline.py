@@ -14,6 +14,14 @@ from sklearn.preprocessing import LabelEncoder
 
 from datetime import datetime
 from keras.preprocessing.text import Tokenizer
+from keras.models import model_from_json
+
+from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
+from keras.models import Sequential, Model
+from keras.regularizers import l2
+from keras.initializers import TruncatedNormal
+from keras.layers.advanced_activations import LeakyReLU, ELU
+from keras import optimizers
 
 class Baseline:
 
@@ -123,7 +131,7 @@ class Baseline:
         print("Saved model to disk")
 
     @staticmethod
-    def save_result(h, name):
+    def save_result(DIR, h, name):
         r_dir = os.path.join(DIR, 'resultados')
         if not os.path.exists(r_dir):
             os.mkdir(r_dir)
@@ -131,7 +139,7 @@ class Baseline:
             pickle.dump(h, f)
 
     @staticmethod    
-    def load_result(name):
+    def load_result(DIR, name):
         with open(os.path.join(DIR, 'resultados', name + '.pkl'), 'r') as f:
             return pickle.load(f)
 
@@ -150,18 +158,15 @@ class Baseline:
     @staticmethod
     def decode_to_categorical(datum):
         return np.argmax(datum)
-  
+    
     @staticmethod
     def plot_2d(test_labels, tsne_features):
-        obj_categories = ['duplicate', 'non-duplicate']
-        groups = [1, 0]
-        colors = plt.cm.rainbow(np.linspace(0, 1, 2))
+        obj_categories = ['anchor', 'positive', 'negative']
+        groups = [0, 1, 2]
+        colors = plt.cm.rainbow(np.linspace(0, 1, 3))
         plt.figure(figsize=(10, 10))
-
-        # test_labels = test_bitmap_labels
-        #test_labels = np.array([ decode_to_categorical(test_labels[i]) for i in range(test_labels.shape[0]) ])
-
-        for c_group, c_color, c_label in zip(groups, colors, obj_categories):
+        
+        for c_group, (c_color, c_label) in enumerate(zip(colors, obj_categories)):
             plt.scatter(tsne_features[np.where(test_labels == c_group), 0],
                         tsne_features[np.where(test_labels == c_group), 1],
                         marker='o',
@@ -173,20 +178,44 @@ class Baseline:
         plt.ylabel('Dimension 2')
         plt.title('t-SNE on Testing Samples')
         plt.legend(loc='best')
-        plt.savefig('clothes-dist.png')
+        #plt.savefig('clothes-dist.png')
         plt.show(block=False)
 
-    # TODO: Refazer o teste de validacao, selecionar instancias aleatorias
-    def display_embed_space(self, similarity_model, layer, batch_size):
-        valid_input_sample, valid_input_pos, valid_input_neg, valid_sim = self.batch_iterator(bug_dir, batch_size, 1)
-        model  = similarity_model.get_layer(layer)
-        model_final = Model(inputs=similarity_model.input, outputs=model.output)
-        x_test_features = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
-                    valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, batch_size=batch_size)
+    def display_embed_space(self, similarity_model, batch_size):
+        valid_input_sample, valid_input_pos, valid_input_neg, valid_sim = self.batch_iterator(self.DIR, batch_size, 1)
+        
+        model_anchor  = similarity_model.get_layer('merge_features_in').output
+        model_final = Model(inputs=similarity_model.input, outputs=model_anchor)
+        x_test_features_anchor = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                                                batch_size=batch_size)
 
-        tsne_features = create_features(x_test_features)
+        model_pos  = similarity_model.get_layer('merge_features_pos').output
+        model_final = Model(inputs=similarity_model.input, outputs=model_pos)
+        x_test_features_pos = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                                                batch_size=batch_size)
 
-        plot_2d(valid_sim, tsne_features)
+        model_neg  = similarity_model.get_layer('merge_features_neg').output
+        model_final = Model(inputs=similarity_model.input, outputs=model_neg)
+        x_test_features_neg = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                                                batch_size=batch_size)
+        
+        #print("Shape", x_test_features_anchor.shape)
+        
+        x_test_features = np.concatenate([x_test_features_anchor, x_test_features_pos, x_test_features_neg], axis=0)
+        
+        #print("features", x_test_features.shape)
+        
+        anchor = np.full((1, batch_size), 0)
+        pos = np.full((1, batch_size), 1)
+        neg = np.full((1, batch_size), 2)
+        valid_sim = np.concatenate([anchor, pos, neg], -1)[0]
+        
+        tsne_features = Baseline.create_features(x_test_features)
+
+        Baseline.plot_2d(valid_sim, tsne_features)
 
     @staticmethod
     def padding_embed(max_char, field, bug):
@@ -361,6 +390,7 @@ class Baseline:
         batch_neg['desc'] = np.array(batch_neg['desc'])
 
         n_half = batch_size // 2
+        n_half = 2 if n_half <= 0 else n_half
         if n_half > 0:
             pos = np.full((1, n_half), 1)
             neg = np.full((1, n_half), 0)
