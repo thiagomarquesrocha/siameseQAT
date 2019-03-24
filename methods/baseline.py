@@ -1,4 +1,3 @@
-
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 import os
@@ -229,7 +228,7 @@ class Baseline:
             embed = np.array(bug[field][:max_char])
         return embed
 
-    def load_preprocess(self):    
+    def load_preprocess(self):   
         for bug_id in tqdm(self.bug_ids):
             bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
         #     print(str(bug['title_word']))
@@ -288,7 +287,7 @@ class Baseline:
         while True:
             input_sample, input_pos, input_neg, sim = self.batch_iterator(data, batch_size, n_neg)
             yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
-            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, None)
+            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, sim)
 
     def siam_gen_classification(self, data, batch_size, n_neg):
         encoder = LabelEncoder()
@@ -351,12 +350,6 @@ class Baseline:
         # global self.bug_set
 
         random.shuffle(self.train_data)
-        num_batches = int(len(self.train_data) / batch_size)
-        if len(data) % batch_size > 0:
-            num_batches += 1
-        #print(num_batches, batch_size)
-        # loop = tqdm(range(num_batches))
-        # loop.set_description('Training')
 
         batch_input, batch_pos, batch_neg = {'title' : [], 'desc' : []}, {'title' : [], 'desc' : []}, {'title' : [], 'desc' : []}
 
@@ -390,7 +383,6 @@ class Baseline:
         batch_neg['desc'] = np.array(batch_neg['desc'])
 
         n_half = batch_size // 2
-        n_half = 2 if n_half <= 0 else n_half
         if n_half > 0:
             pos = np.full((1, n_half), 1)
             neg = np.full((1, n_half), 0)
