@@ -21,6 +21,8 @@ from keras.regularizers import l2
 from keras.initializers import TruncatedNormal
 from keras.layers.advanced_activations import LeakyReLU, ELU
 from keras import optimizers
+from keras import backend as K
+import tensorflow as tf
 
 class Baseline:
 
@@ -104,13 +106,13 @@ class Baseline:
         return valid_a, valid_b, valid_sim
 
     @staticmethod
-    def load_model(DIR, name):
+    def load_model(DIR, name, dependences):
         m_dir = os.path.join(DIR, 'modelos')
         # load json and create model
         json_file = open(os.path.join(m_dir, "model_{}.json".format(name)), 'r')
         loaded_model_json = json_file.read()
         json_file.close()
-        loaded_model = model_from_json(loaded_model_json)
+        loaded_model = model_from_json(loaded_model_json, dependences)
         # load weights into new model
         loaded_model.load_weights(os.path.join(m_dir, "model_{}.h5".format(name)))
         print("Loaded model from disk")
@@ -289,16 +291,6 @@ class Baseline:
             yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
             'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, sim)
 
-    def siam_gen_classification(self, data, batch_size, n_neg):
-        encoder = LabelEncoder()
-
-        while True:
-            input_sample, input_pos, input_neg, sim = self.batch_iterator(data, batch_size, n_neg)
-            sim = encoder.fit_transform(sim)
-            sim = to_categorical(sim)
-            yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
-            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, sim)
-
     def read_batch_bugs(batch_bugs, data):
         #global bug_set
         desc_word = []
@@ -469,3 +461,37 @@ class Baseline:
             if embedding_vector is not None:
                 # words not found in embedding index will be all-zeros.
                 self.embedding_matrix[i] = embedding_vector
+
+    ############################# CUSTOM LOSS #####################################
+    @staticmethod
+    def l2_normalize(x, axis):
+        norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=True))
+        return K.maximum(x, K.epsilon()) / K.maximum(norm, K.epsilon())
+
+    # https://github.com/keras-team/keras/issues/3031
+    # https://github.com/keras-team/keras/issues/8335
+    @staticmethod
+    def cosine_distance(inputs):
+        x, y = inputs
+        x = Baseline.l2_normalize(x, axis=-1)
+        y = Baseline.l2_normalize(y, axis=-1)
+        similarity = K.batch_dot(x, y, axes=1)
+        distance = K.constant(1) - similarity
+        # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
+        # positive (which is the case after ReLU activation).
+        return K.mean(distance, axis=-1)
+    @staticmethod
+    def margin_loss(y_true, y_pred):
+        margin = K.constant(1.0)
+        return K.mean(K.maximum(0.0, margin - y_pred[0] + y_pred[1]))
+    @staticmethod
+    def pos_distance(y_true, y_pred):
+        return K.mean(y_pred[0])
+    @staticmethod
+    def neg_distance(y_true, y_pred):
+        return K.mean(y_pred[1])
+    @staticmethod
+    def stack_tensors(vects):
+        return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
+        # better method is to use concatenate
+        return K.concatenate(vects,axis=1)
