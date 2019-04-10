@@ -252,6 +252,18 @@ class Baseline:
         return neg_bug
 
     @staticmethod
+    def read_test_data(data):
+        test_data = []
+        bug_ids = set()
+        with open(os.path.join(data, 'test.txt'), 'r') as f:
+            for line in f:
+                tokens = line.strip().split()
+                test_data.append([int(tokens[0]), [int(bug) for bug in tokens[1:]]])
+                for token in tokens:
+                    bug_ids.add(int(token))
+        return test_data, list(bug_ids)
+
+    @staticmethod
     def read_train_data(data):
         data_pairs = []
         data_dup_sets = {}
@@ -401,8 +413,9 @@ class Baseline:
             self.bug_set[bug_id]['title_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['title_word'], self.MAX_SEQUENCE_LENGTH_T)
             loop.update(1)
         loop.close()
-            
-        len(self.bug_set)
+
+    def get_bug_set(self):
+        return self.bug_set
 
     def display_batch(self, groups, nb):
         input_sample, input_pos, input_neg, v_sim = self.batch_iterator(groups, nb, 1)
