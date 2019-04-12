@@ -8,7 +8,7 @@ nb_dir = os.path.split(os.getcwd())[0]
 if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
-from baseline import Baseline
+from methods.baseline import Baseline
 from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
         MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
 from keras.models import Model
@@ -73,31 +73,36 @@ class Retrieval():
         
         self.model = model
 
-    def infer_vector(self, bugs, path_data):
-        bug_set = self.baseline.get_bug_set()
+    def read_train(self, path_data):
+        self.train = []
         with open(path_data, 'r') as file_train:
             for row in file_train:
                 dup_a_id, dup_b_id = np.array(row.split(' '), int)
-                if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
-                bug_a = bug_set[dup_a_id]
-                bug_b = bug_set[dup_b_id]
-                bug_a_vector = self.model.predict([bug_a['title_word'], bug_a['description_word']])
-                bug_b_vector = self.model.predict([bug_b['title_word'], bug_b['description_word']])
-                bugs.append(bug_a_vector)
-                bugs.append(bug_b_vector)
+                self.train.append([dup_a_id, dup_b_id])
+
+    def infer_vector(self, bugs, vectorized):
+        bug_set = self.baseline.get_bug_set()
+        for row in tqdm(bugs):
+            dup_a_id, dup_b_id = row
+            # if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
+            bug_a = bug_set[dup_a_id]
+            bug_b = bug_set[dup_b_id]
+            bug_a_vector = self.model.predict([[bug_a['title_word']], [bug_a['description_word']]])[0]
+            bug_b_vector = self.model.predict([[bug_b['title_word']], [bug_b['description_word']]])[0]
+            vectorized.append(bug_a_vector)
+            vectorized.append(bug_b_vector)
 
     def run(self, path, path_buckets, path_train, path_test):
 
         MAX_SEQUENCE_LENGTH_T = 100 # Title
         MAX_SEQUENCE_LENGTH_D = 100 # Description
-        #DIR = 'data/processed/eclipse'
 
         # Create the instance from baseline
         self.baseline = Baseline(path, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
 
         df = pd.read_csv(path_buckets)
 
-        self.train_bugs = []
+        self.train_vectorized, self.test_vectorized = [], []
 
         # Load bug ids
         self.load_bugs(path, path_train)
@@ -108,8 +113,10 @@ class Retrieval():
         # Read the siamese model
         self.read_model(MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
         # Infer vector to all train
-        self.infer_vector(self.train_bugs, path_train)
+        self.read_train(path_train)
+        self.infer_vector(self.train, self.train_vectorized)
         # Infer vector to all test
+        self.infer_vector(self.test, self.test_vectorized)
         # Indexing all train in KNN method
         # Recommend neighborhood instances from test sample
         # Generating the rank result

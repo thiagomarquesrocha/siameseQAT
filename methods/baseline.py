@@ -407,7 +407,7 @@ class Baseline:
 
         loop = tqdm(total=len(self.bug_ids))
 
-        for bug_id in self.bug_ids[0:1]:
+        for bug_id in self.bug_ids:
             self.bug_set[bug_id] = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
             self.bug_set[bug_id]['description_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['description_word'], self.MAX_SEQUENCE_LENGTH_D)
             self.bug_set[bug_id]['title_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['title_word'], self.MAX_SEQUENCE_LENGTH_T)
