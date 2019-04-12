@@ -12,6 +12,7 @@ from methods.baseline import Baseline
 from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
         MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
 from keras.models import Model
+from sklearn.neighbors import NearestNeighbors
 
 class Retrieval():
     def __init__(self):
@@ -92,6 +93,15 @@ class Retrieval():
             vectorized.append(bug_a_vector)
             vectorized.append(bug_b_vector)
 
+    def create_bug_clusters(self, bug_set_cluster, bugs):
+        index = 0
+        for row in tqdm(bugs):
+            dup_a_id, dup_b_id = row
+            # if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
+            bug_set_cluster[indices[index][:1][0]] = dup_a_id
+            bug_set_cluster[indices[index+1][:1][0]] = dup_b_id
+            index += 2
+
     def run(self, path, path_buckets, path_train, path_test):
 
         MAX_SEQUENCE_LENGTH_T = 100 # Title
@@ -102,8 +112,6 @@ class Retrieval():
 
         df = pd.read_csv(path_buckets)
 
-        self.train_vectorized, self.test_vectorized = [], []
-
         # Load bug ids
         self.load_bugs(path, path_train)
         # Create the buckets
@@ -112,13 +120,24 @@ class Retrieval():
         self.create_queries(path_test)
         # Read the siamese model
         self.read_model(MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
-        # Infer vector to all train
+        
+        self.train_vectorized, self.test_vectorized = [], []
+        self.bug_set_cluster_train, self.bug_set_cluster_test = [], []
         self.read_train(path_train)
+        # Infer vector to all train
+        self.create_bug_clusters(self.bug_set_cluster_train, self.train)
         self.infer_vector(self.train, self.train_vectorized)
         # Infer vector to all test
+        self.create_bug_clusters(self.bug_set_cluster_test, self.test)
         self.infer_vector(self.test, self.test_vectorized)
         # Indexing all train in KNN method
+        X = np.array(self.train_vectorized)
+        nbrs = NearestNeighbors(n_neighbors=20, algorithm='ball_tree').fit(X)
+        # Next we find k nearest neighbor for each point in object X.
+        distances, indices = nbrs.kneighbors(X)
         # Recommend neighborhood instances from test sample
+        X_test = self.test_vectorized
+        distances_test, indices_test = nbrs.kneighbors(X_test)
         # Generating the rank result
 
 if __name__ == '__main__':
