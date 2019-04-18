@@ -27,12 +27,24 @@ class Retrieval():
     def create_bucket(self, df):
         print("Creating the buckets...")
         buckets = {}
-        loop = tqdm(total=df.shape[0])
-        for row in df.iterrows():
-            name = row[1]['issue_id']
-            duplicates = row[1]['duplicate']
-            duplicates = [] if (type(duplicates) == float) else np.array(str(duplicates).split(';'), int)
-            buckets[name] = duplicates
+        # Reading the buckets
+        df_buckets = df[df['dup_id'] == '[]']
+        loop = tqdm(total=df_buckets.shape[0])
+        for row in df_buckets.iterrows():
+            name = row[1]['bug_id']
+            buckets[name] = set()
+            loop.update(1)
+        loop.close()
+        # Fill the buckets
+        df_duplicates = df[df['dup_id'] != '[]']
+        loop = tqdm(total=df_duplicates.shape[0])
+        for row_bug_id, row_dup_id in df_duplicates[['bug_id', 'dup_id']].values:
+            bucket_name = int(row_dup_id)
+            dup_id = row_bug_id
+            while bucket_name not in buckets:
+                query = df_duplicates[df_duplicates['bug_id'] == bucket_name]
+                bucket_name = int(query['dup_id'])
+            buckets[bucket_name].add(dup_id)
             loop.update(1)
         loop.close()
         self.buckets = buckets
@@ -144,7 +156,7 @@ if __name__ == '__main__':
     retrieval = Retrieval()
     retrieval.run(
         'data/processed/eclipse', 
-        'data/normalized/eclipse/eclipse_pairs.csv', 
+        'data/normalized/eclipse/eclipse.csv', 
         'data/processed/eclipse/train.txt', 
         'data/processed/eclipse/test.txt')
     print("Retrieval")

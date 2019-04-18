@@ -14,10 +14,11 @@ class Evaluation():
         query_master = int(query_master)
         hit = 0
         for pos, item in enumerate(rank.split(",")):
+            if item.strip() == '': continue
             master, dup, sim = item.split(':')
             dup = int(dup)
             master = int(master)
-            if master == query_master and (pos+1) <= k:
+            if dup == master and master == query_master and (pos+1) <= k:
                 hit=1
                 return [hit]
         return [hit]
@@ -35,16 +36,16 @@ class Evaluation():
                 total+=1
 
         report = {
-            'recall_at_5' : round(sum(recall_at_5) / total, 2),
-            'recall_at_10' : round(sum(recall_at_10) / total, 2),
-            'recall_at_15' : round(sum(recall_at_15) / total, 2),
-            'recall_at_20' : round(sum(recall_at_20) / total, 2)
+            'recall_at_5' : round(sum(recall_at_5) / total, 4),
+            'recall_at_10' : round(sum(recall_at_10) / total, 4),
+            'recall_at_15' : round(sum(recall_at_15) / total, 4),
+            'recall_at_20' : round(sum(recall_at_20) / total, 4)
         }
 
         return report
 
 if __name__ == '__main__':
     evaluation = Evaluation()
-    report = evaluation.evaluate('data/processed/eclipse/rank.txt')
+    report = evaluation.evaluate('data/processed/eclipse/exported_rank.txt')
 
     print(report)
