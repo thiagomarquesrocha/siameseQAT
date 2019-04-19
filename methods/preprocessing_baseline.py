@@ -231,7 +231,9 @@ class Preprocess:
       
       # Train
       df_train = pd.read_csv('{}.csv'.format(self.DOMAIN))
-      df_train.columns = ['issue_id','bug_severity','bug_status','component','creation_ts','delta_ts','description','dup_id','priority','product','resolution','short_desc','version']
+      df_train.columns = ['issue_id','bug_severity','bug_status','component',
+                          'creation_ts','delta_ts','description','dup_id','priority',
+                          'product','resolution','title','version']
 
       ### Pairs
       df_train_pair = pd.read_csv('{}.csv'.format(self.PAIRS))
