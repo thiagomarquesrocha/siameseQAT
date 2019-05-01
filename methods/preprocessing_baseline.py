@@ -21,8 +21,36 @@ import _pickle as pickle
 from multiprocessing import Pool
 import multiprocessing
 import sys
+import spacy
 
 class Preprocess:
+
+  ENTITY_ENUM = {
+    '': '',
+    'PERSON': 'person',
+    'NORP': 'nationality',
+    'FAC': 'facility',
+    'ORG': 'organization',
+    'GPE': 'country',
+    'LOC': 'location',
+    'PRODUCT': 'product',
+    'EVENT': 'event',
+    'WORK_OF_ART': 'artwork',
+    'LANGUAGE': 'language',
+    'DATE': 'date',
+    'TIME': 'time',
+#     'PERCENT': 'percent',
+#     'MONEY': 'money',
+#     'QUANTITY': 'quantity',
+#     'ORDINAL': 'ordinal',
+#     'CARDINAL': 'cardinal',
+    'PERCENT': 'number',
+    'MONEY': 'number',
+    'QUANTITY': 'number',
+    'ORDINAL': 'number',
+    'CARDINAL': 'number',
+    'LAW': 'law'
+}
 
   def __init__(self, DATASET, DOMAIN, PAIRS):
     self.MAX_NB_WORDS = 20000
@@ -31,6 +59,7 @@ class Preprocess:
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
     self.PAIRS = PAIRS
+    self.nlp = spacy.load('en')
 
   def read_pairs(self, df):
     bug_pairs = []
@@ -81,13 +110,20 @@ class Preprocess:
       s.append(c)
     return ''.join(s).strip()
 
+  def ner(self, text):
+    corpus = self.nlp(text)
+    for row in corpus.ents:
+      text = text.replace(row.text, self.ENTITY_ENUM[row.label_])
+    return text
+
   def normalize_text(self, text):
-    try:
-      tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
-      text = ' '.join([self.func_name_tokenize(token) for token in tokens])
-      text = re.sub(r'\d+((\s\d+)+)?', 'number', text)
-    except:
-      return 'description'
+    #try:
+    text = self.ner(str(text))
+    tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
+    text = ' '.join([self.func_name_tokenize(token) for token in tokens])
+    text = re.sub(r'\d+((\s\d+)+)?', 'number', text)
+    #except:
+    #  return 'description'
     return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
 
   def normalized_data(self, bug_ids, df):
@@ -102,7 +138,6 @@ class Preprocess:
     normalized_bugs = open(os.path.join(self.DIR, 'normalized_bugs.json'), 'w')
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
-          
           bug = row[1]
           
           bug['description'] = self.normalize_text(bug['description'])
