@@ -39,6 +39,7 @@ class Baseline:
         self.GLOVE_DIR = ""
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
+        self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
 
     def load_ids(self, DIR):
         self.bug_ids = []
@@ -303,23 +304,10 @@ class Baseline:
             yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
             'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, sim)
 
-    def read_batch_bugs(batch_bugs, data):
-        #global bug_set
-        desc_word = []
-        short_desc_word = []
-        for bug_id in batch_bugs:
-            #bug = pickle.load(open(os.path.join(data, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-            bug = self.bug_set[bug_id]
-            desc_word.append(bug['description_word'])
-            short_desc_word.append(bug['title_word'])
-            
-        desc_word = np.array(desc_word)
-        short_desc_word = np.array(short_desc_word)
-        batch_bugs = dict()
-        batch_bugs['desc'] = (desc_word)
-        batch_bugs['title'] = (short_desc_word)
-
-        return batch_bugs
+    def to_one_hot(self, idx, size):
+        one_hot = np.zeros(size)
+        one_hot[int(float(idx))] = 1
+        return one_hot
 
     @staticmethod
     def data_padding_bug(seq, max_seq_length):
@@ -344,6 +332,20 @@ class Baseline:
             padded_data[i] = np.concatenate([embed, seq], -1)
         return padded_data.astype(np.int)
 
+    def read_batch_bugs(self, batch, bug):
+        info_ = np.concatenate((
+            self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
+            self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
+            self.to_one_hot(bug['component'], self.info_dict['component']),
+            self.to_one_hot(bug['priority'], self.info_dict['priority']),
+            self.to_one_hot(bug['product'], self.info_dict['product']),
+            self.to_one_hot(bug['version'], self.info_dict['version']))
+        )
+        info.append(info_)
+        batch['info'].append(info)
+        batch['title'].append(bug['title_word'])
+        batch['desc'].append(bug['description_word'])
+
     # data - path
     # batch_size - 128
     # n_neg - 1
@@ -362,29 +364,25 @@ class Baseline:
         batch_triplets = []
         
         for offset in range(batch_size):
-            #d_start = datetime.now()
-            #print("Offset", offset)
             neg_bug = Baseline.get_neg_bug(self.dup_sets[self.train_data[offset][0]], self.bug_ids)
-            #d_end = datetime.now()
-            #print("Time", (d_end - d_start).microseconds)
             anchor, pos, neg = self.train_data[offset][0], self.train_data[offset][1], neg_bug
             bug_anchor = self.bug_set[anchor]
             bug_pos = self.bug_set[pos]
             bug_neg = self.bug_set[neg]
-            batch_input['title'].append(bug_anchor['title_word'])
-            batch_input['desc'].append(bug_anchor['description_word'])
-            batch_pos['title'].append(bug_pos['title_word'])
-            batch_pos['desc'].append(bug_pos['description_word'])
-            batch_neg['title'].append(bug_neg['title_word'])
-            batch_neg['desc'].append(bug_neg['description_word'])
+            self.read_batch_bugs(batch_input, bug_anchor)
+            self.read_batch_bugs(batch_pos, bug_pos)
+            self.read_batch_bugs(batch_neg, bug_neg)
             batch_triplets.append([self.train_data[offset][0], self.train_data[offset][1], neg_bug])
 
         batch_input['title'] = np.array(batch_input['title'])
         batch_input['desc'] = np.array(batch_input['desc'])
+        batch_input['info'] = np.array(batch_input['info'])
         batch_pos['title'] = np.array(batch_pos['title'])
         batch_pos['desc'] = np.array(batch_pos['desc'])
+        batch_pos['info'] = np.array(batch_pos['info'])
         batch_neg['title'] = np.array(batch_neg['title'])
         batch_neg['desc'] = np.array(batch_neg['desc'])
+        batch_neg['info'] = np.array(batch_neg['info'])
 
         n_half = batch_size // 2
         if n_half > 0:
@@ -396,9 +394,9 @@ class Baseline:
 
         input_sample, input_pos, input_neg = {}, {}, {}
 
-        input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'] }
-        input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'] }
-        input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'] }
+        input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'], 'info' : batch_input['info'] }
+        input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
+        input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
 
         return input_sample, input_pos, input_neg, sim #sim
 
