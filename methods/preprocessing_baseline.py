@@ -126,12 +126,12 @@ class Preprocess:
     #  return 'description'
     return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
 
-  def save_dict(set, filename):
+  def save_dict(self, set, filename):
     with open(os.path.join(args.data, filename), 'w') as f:
       for i, item in enumerate(set):
         f.write('%s\t%d\n' % (item, i))
 
-  def load_dict(filename):
+  def load_dict(self, filename):
     dict = {}
     with open(os.path.join(args.data, filename), 'r') as f:
       for line in f:
@@ -169,12 +169,12 @@ class Preprocess:
           text.append(bug['description'])
           text.append(bug['title'])
           loop.update(1)
-    save_dict(products, os.path.join(self.DIR, 'product.dic'))
-    save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
-    save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
-    save_dict(versions, os.path.join(self.DIR, 'version.dic'))
-    save_dict(components, os.path.join(self.DIR, 'component.dic'))
-    save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
+    self.save_dict(products, os.path.join(self.DIR, 'product.dic'))
+    self.save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
+    self.save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
+    self.save_dict(versions, os.path.join(self.DIR, 'version.dic'))
+    self.save_dict(components, os.path.join(self.DIR, 'component.dic'))
+    self.save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
     return text
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
@@ -214,12 +214,12 @@ class Preprocess:
           os.mkdir(bug_dir)
       bugs = []
       print("Reading the normalized_bugs.json ...")
-      product_dict = load_dict(os.path.join(self.DIR,'product.dic'))
-      bug_severity_dict = load_dict(os.path.join(self.DIR,'bug_severity.dic'))
-      priority_dict = load_dict(os.path.join(self.DIR,'priority.dic'))
-      version_dict = load_dict(os.path.join(self.DIR,'version.dic'))
-      component_dict = load_dict(os.path.join(self.DIR,'component.dic'))
-      bug_status_dict = load_dict(os.path.join(self.DIR,'bug_status.dic'))
+      product_dict = self.load_dict(os.path.join(self.DIR,'product.dic'))
+      bug_severity_dict = self.load_dict(os.path.join(self.DIR,'bug_severity.dic'))
+      priority_dict = self.load_dict(os.path.join(self.DIR,'priority.dic'))
+      version_dict = self.load_dict(os.path.join(self.DIR,'version.dic'))
+      component_dict = self.load_dict(os.path.join(self.DIR,'component.dic'))
+      bug_status_dict = self.load_dict(os.path.join(self.DIR,'bug_status.dic'))
       with open(os.path.join(self.DIR, 'normalized_bugs.json'), 'r') as f:
           #loop = tqdm(f)
           with tqdm(total=total) as loop:
