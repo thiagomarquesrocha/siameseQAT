@@ -59,7 +59,7 @@ class Preprocess:
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
     self.PAIRS = PAIRS
-    self.nlp = spacy.load('en')
+    self.nlp = spacy.load('en_core_web_sm')
 
   def read_pairs(self, df):
     bug_pairs = []
@@ -118,13 +118,26 @@ class Preprocess:
 
   def normalize_text(self, text):
     #try:
-    text = self.ner(str(text))
+    text = re.sub(r'\d+((\s\d+)+)?', '', str(text))
+    text = self.ner(text)
     tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
     text = ' '.join([self.func_name_tokenize(token) for token in tokens])
-    text = re.sub(r'\d+((\s\d+)+)?', 'number', text)
     #except:
     #  return 'description'
     return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
+
+  def save_dict(set, filename):
+    with open(os.path.join(args.data, filename), 'w') as f:
+      for i, item in enumerate(set):
+        f.write('%s\t%d\n' % (item, i))
+
+  def load_dict(filename):
+    dict = {}
+    with open(os.path.join(args.data, filename), 'r') as f:
+      for line in f:
+        tokens = line.split('\t')
+        dict[tokens[0]] = tokens[1]
+    return dict
 
   def normalized_data(self, bug_ids, df):
     print("Normalizing text...")
@@ -139,7 +152,12 @@ class Preprocess:
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
           bug = row[1]
-          
+          products.add(bug['product'])
+          bug_severities.add(bug['bug_severity'])
+          priorities.add(bug['priority'])
+          versions.add(bug['version'])
+          components.add(bug['component'])
+          bug_statuses.add(bug['bug_status'])
           bug['description'] = self.normalize_text(bug['description'])
           if 'title' in bug:
               bug['title'] = self.normalize_text(bug['title'])
@@ -151,6 +169,12 @@ class Preprocess:
           text.append(bug['description'])
           text.append(bug['title'])
           loop.update(1)
+    save_dict(products, os.path.join(self.DIR, 'product.dic'))
+    save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
+    save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
+    save_dict(versions, os.path.join(self.DIR, 'version.dic'))
+    save_dict(components, os.path.join(self.DIR, 'component.dic'))
+    save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
     return text
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
@@ -189,16 +213,26 @@ class Preprocess:
       if not os.path.exists(bug_dir):
           os.mkdir(bug_dir)
       bugs = []
-      cont = 1
       print("Reading the normalized_bugs.json ...")
+      product_dict = load_dict(os.path.join(self.DIR,'product.dic'))
+      bug_severity_dict = load_dict(os.path.join(self.DIR,'bug_severity.dic'))
+      priority_dict = load_dict(os.path.join(self.DIR,'priority.dic'))
+      version_dict = load_dict(os.path.join(self.DIR,'version.dic'))
+      component_dict = load_dict(os.path.join(self.DIR,'component.dic'))
+      bug_status_dict = load_dict(os.path.join(self.DIR,'bug_status.dic'))
       with open(os.path.join(self.DIR, 'normalized_bugs.json'), 'r') as f:
           #loop = tqdm(f)
           with tqdm(total=total) as loop:
               for line in f:
-                  #loop.set_description('Data dumping {}/{}'.format(cont, total))
+                  bug = json.loads(line)
+                  bug['product'] = product_dict[bug['product']]
+                  bug['bug_severity'] = bug_severity_dict[bug['bug_severity']]
+                  bug['priority'] = priority_dict[bug['priority']]
+                  bug['version'] = version_dict[bug['version']]
+                  bug['component'] = component_dict[bug['component']]
+                  bug['bug_status'] = bug_status_dict[bug['bug_status']]
+                  bugs.append(bug)
                   loop.update(1)
-                  bugs.append(json.loads(line))
-                  cont += 1
 
       return bugs
 
