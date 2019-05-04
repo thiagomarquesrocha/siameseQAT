@@ -127,13 +127,13 @@ class Preprocess:
     return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
 
   def save_dict(self, set, filename):
-    with open(os.path.join(args.data, filename), 'w') as f:
+    with open(filename, 'w') as f:
       for i, item in enumerate(set):
         f.write('%s\t%d\n' % (item, i))
 
   def load_dict(self, filename):
     dict = {}
-    with open(os.path.join(args.data, filename), 'r') as f:
+    with open(filename, 'r') as f:
       for line in f:
         tokens = line.split('\t')
         dict[tokens[0]] = tokens[1]
