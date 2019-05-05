@@ -43,6 +43,7 @@ class Baseline:
         self.get_info_dict(DIR, dataset)
 
     def get_info_dict(self, data, dataset):
+        if dataset is None: return
         # self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
         df = pd.read_csv(os.path.join(data, dataset))
         self.info_dict = {

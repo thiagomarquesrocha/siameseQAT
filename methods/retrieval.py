@@ -20,8 +20,7 @@ class Retrieval():
     
     def load_bugs(self, data, train):
         self.baseline.load_ids(data)
-        bug_dir = os.path.join(data)
-        self.baseline.prepare_dataset(bug_dir)
+        self.baseline.prepare_dataset()
         self.baseline.load_bugs()
 
     def create_bucket(self, df):
@@ -64,9 +63,9 @@ class Retrieval():
                     test.append([query, dup])
         self.test = test
 
-    def read_model(self, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    def read_model(self, name, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
         
-        name = 'baseline_1000epoch_10steps_512batch(eclipse)'
+        # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
         similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
 
         bug_t = Input(shape = (MAX_SEQUENCE_LENGTH_T, ), name = 'title')
@@ -95,15 +94,16 @@ class Retrieval():
 
     def infer_vector(self, bugs, vectorized):
         bug_set = self.baseline.get_bug_set()
+        bug_unique = set()
         for row in tqdm(bugs):
             dup_a_id, dup_b_id = row
+            bug_unique.add(dup_a_id)
+            bug_unique.add(dup_b_id)
+        for bug_id in tqdm(bug_unique):
             # if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
-            bug_a = bug_set[dup_a_id]
-            bug_b = bug_set[dup_b_id]
-            bug_a_vector = self.model.predict([[bug_a['title_word']], [bug_a['description_word']]])[0]
-            bug_b_vector = self.model.predict([[bug_b['title_word']], [bug_b['description_word']]])[0]
-            vectorized.append(bug_a_vector)
-            vectorized.append(bug_b_vector)
+            bug = bug_set[bug_id]
+            bug_vector = retrieval.model.predict([[bug['title_word']], [bug['description_word']]])[0]
+            vectorized.append(bug_vector)
 
     def create_bug_clusters(self, bug_set_cluster, bugs):
         index = 0
