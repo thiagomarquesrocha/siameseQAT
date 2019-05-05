@@ -23,10 +23,11 @@ from keras.layers.advanced_activations import LeakyReLU, ELU
 from keras import optimizers
 from keras import backend as K
 import tensorflow as tf
+import pandas as pd
 
 class Baseline:
 
-    def __init__(self, DIR, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    def __init__(self, DIR, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
         self.sentence_dict = {}
         self.corpus = []
         self.bug_ids = []
@@ -39,7 +40,19 @@ class Baseline:
         self.GLOVE_DIR = ""
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
-        self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
+        self.get_info_dict(DIR, dataset)
+
+    def get_info_dict(self, data, dataset):
+        # self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
+        df = pd.read_csv(os.path.join(data, dataset))
+        self.info_dict = {
+            'bug_severity' : df['bug_severity'].unique().shape[0],
+            'bug_status' : df['bug_status'].unique().shape[0],
+            'component' : df['component'].unique().shape[0],
+            'priority' : df['priority'].unique().shape[0],
+            'product' : df['product'].unique().shape[0],
+            'version' : df['version'].unique().shape[0]
+        }
 
     def load_ids(self, DIR):
         self.bug_ids = []
@@ -288,21 +301,22 @@ class Baseline:
         return bug_ids
 
     # data - path
-    def prepare_dataset(self, data):
+    def prepare_dataset(self):
         # global train_data
         # global dup_sets
         # global bug_ids
         if not self.train_data:
-            self.train_data, self.dup_sets = Baseline.read_train_data(data)
+            self.train_data, self.dup_sets = Baseline.read_train_data(self.DIR)
             #print(len(train_data))
         if not self.bug_ids:
-            self.bug_ids = Baseline.read_bug_ids(data)
+            self.bug_ids = Baseline.read_bug_ids(self.DIR)
 
-    def siam_gen(self, data, batch_size, n_neg):
+    def siam_gen(self, batch_size, n_neg):
         while True:
-            input_sample, input_pos, input_neg, sim = self.batch_iterator(data, batch_size, n_neg)
+            input_sample, input_pos, input_neg, sim = self.batch_iterator(self.DIR, batch_size, n_neg)
             yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
-            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'] }, sim)
+            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'],
+            'info_in' : input_sample['info'], 'info_pos' : input_pos['info'], 'info_neg' : input_neg['info'] }, sim)
 
     def to_one_hot(self, idx, size):
         one_hot = np.zeros(size)
@@ -333,7 +347,7 @@ class Baseline:
         return padded_data.astype(np.int)
 
     def read_batch_bugs(self, batch, bug):
-        info_ = np.concatenate((
+        info = np.concatenate((
             self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
             self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
             self.to_one_hot(bug['component'], self.info_dict['component']),
@@ -341,7 +355,7 @@ class Baseline:
             self.to_one_hot(bug['product'], self.info_dict['product']),
             self.to_one_hot(bug['version'], self.info_dict['version']))
         )
-        info.append(info_)
+        #info.append(info_)
         batch['info'].append(info)
         batch['title'].append(bug['title_word'])
         batch['desc'].append(bug['description_word'])
@@ -357,7 +371,9 @@ class Baseline:
 
         random.shuffle(self.train_data)
 
-        batch_input, batch_pos, batch_neg = {'title' : [], 'desc' : []}, {'title' : [], 'desc' : []}, {'title' : [], 'desc' : []}
+        batch_input, batch_pos, batch_neg = {'title' : [], 'desc' : [], 'info' : []}, \
+                                                {'title' : [], 'desc' : [], 'info' : []}, \
+                                                    {'title' : [], 'desc' : [], 'info' : []}
 
         n_train = len(self.train_data)
 
@@ -415,8 +431,8 @@ class Baseline:
     def get_bug_set(self):
         return self.bug_set
 
-    def display_batch(self, groups, nb):
-        input_sample, input_pos, input_neg, v_sim = self.batch_iterator(groups, nb, 1)
+    def display_batch(self, nb):
+        input_sample, input_pos, input_neg, v_sim = self.batch_iterator(self.DIR, nb, 1)
 
         t_a, t_b, d_a, d_b = [], [], [], []
         
@@ -437,11 +453,11 @@ class Baseline:
             key_t_b = ','.join(t_b.astype(str))
             key_d_a = ','.join(d_a.astype(str))
             key_d_b = ','.join(d_b.astype(str))
-            print("Title: \n{}".format(self.sentence_dict[key_t_a]))
-            print("Title: \n{}".format(self.sentence_dict[key_t_b]))
-            print("Description: \n{}".format(self.sentence_dict[key_d_a]))
-            print("Description: \n{}".format(self.sentence_dict[key_d_b]))
-            print("similar =", str(sim))
+            print("***Title***: {}".format(self.sentence_dict[key_t_a]))
+            print("***Title***: {}".format(self.sentence_dict[key_t_b]))
+            print("***Description***: {}".format(self.sentence_dict[key_d_a]))
+            print("***Description***: {}".format(self.sentence_dict[key_d_b]))
+            print("***similar =", str(sim))
             print("########################")
 
     def word_index_count(self, corpus, MAX_NB_WORDS):
