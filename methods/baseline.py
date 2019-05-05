@@ -203,19 +203,22 @@ class Baseline:
         model_anchor  = similarity_model.get_layer('merge_features_in').output
         model_final = Model(inputs=similarity_model.input, outputs=model_anchor)
         x_test_features_anchor = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
-                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description'],
+                        valid_input_sample['info'], valid_input_pos['info'], valid_input_neg['info']], verbose = False, 
                                                 batch_size=batch_size)
 
         model_pos  = similarity_model.get_layer('merge_features_pos').output
         model_final = Model(inputs=similarity_model.input, outputs=model_pos)
         x_test_features_pos = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
-                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description'],
+                        valid_input_sample['info'], valid_input_pos['info'], valid_input_neg['info']], verbose = False, 
                                                 batch_size=batch_size)
 
         model_neg  = similarity_model.get_layer('merge_features_neg').output
         model_final = Model(inputs=similarity_model.input, outputs=model_neg)
         x_test_features_neg = model_final.predict([valid_input_sample['title'], valid_input_pos['title'], valid_input_neg['title'], 
-                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description']], verbose = False, 
+                        valid_input_sample['description'], valid_input_pos['description'], valid_input_neg['description'],
+                        valid_input_sample['info'], valid_input_pos['info'], valid_input_neg['info']], verbose = False, 
                                                 batch_size=batch_size)
         
         #print("Shape", x_test_features_anchor.shape)
