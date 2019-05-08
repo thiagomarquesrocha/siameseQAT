@@ -32,6 +32,7 @@ class Retrieval():
         for row in df_buckets.iterrows():
             name = row[1]['bug_id']
             buckets[name] = set()
+            buckets[name].add(name)
             loop.update(1)
         loop.close()
         # Fill the buckets
@@ -63,24 +64,27 @@ class Retrieval():
                     test.append([query, dup])
         self.test = test
 
-    def read_model(self, name, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    def read_model(self, name, MAX_SEQUENCE_INFO, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
         
         # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
         similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
 
         bug_t = Input(shape = (MAX_SEQUENCE_LENGTH_T, ), name = 'title')
         bug_d = Input(shape = (MAX_SEQUENCE_LENGTH_D, ), name = 'desc')
+        bug_i = Input(shape = (MAX_SEQUENCE_INFO, ), name = 'info')
         # Encoder
         title_encoder = similarity_model.get_layer('FeatureLstmGenerationModel')
         desc_encoder = similarity_model.get_layer('FeatureCNNGenerationModel')
+        info_encoder = similarity_model.get_layer('FeatureMlpGenerationModel')
         # Bug feature
         bug_encoded_t = title_encoder(bug_t)
         bug_encoded_d = desc_encoder(bug_d)
+        bug_encoded_i = info_encoder(bug_i)
 
         model = similarity_model.get_layer('merge_features_in')
-        output = model([bug_encoded_t, bug_encoded_d])
+        output = model([bug_encoded_i, bug_encoded_t, bug_encoded_d])
 
-        model = Model(inputs=[bug_t, bug_d], outputs=[output])
+        model = Model(inputs=[bug_i, bug_t, bug_d], outputs=[output])
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics = ['accuracy'])
         
         self.model = model
@@ -92,18 +96,38 @@ class Retrieval():
                 dup_a_id, dup_b_id = np.array(row.split(' '), int)
                 self.train.append([dup_a_id, dup_b_id])
 
-    def infer_vector(self, bugs, vectorized):
+    def infer_vector_train(self, bugs, vectorized):
         bug_set = self.baseline.get_bug_set()
         bug_unique = set()
         for row in tqdm(bugs):
             dup_a_id, dup_b_id = row
             bug_unique.add(dup_a_id)
             bug_unique.add(dup_b_id)
-        for bug_id in tqdm(bug_unique):
-            # if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
+        for bug_id in tqdm(list(bug_unique)):
             bug = bug_set[bug_id]
-            bug_vector = retrieval.model.predict([[bug['title_word']], [bug['description_word']]])[0]
+            bug_vector = self.model.predict([[self.get_info(bug)], [bug['title_word']], [bug['description_word']]])[0]
             vectorized.append(bug_vector)
+    def infer_vector_test(self, bugs, vectorized):
+        bug_set = self.baseline.get_bug_set()
+        for row in tqdm(bugs):
+            for bug_id in row:
+                dup_a_id, dup_b_id = row
+                bug = bug_set[bug_id]
+                bug_vector = self.model.predict([[self.get_info(bug)], [bug['title_word']], [bug['description_word']]])[0]
+                vectorized.append({ 'vector' : bug_vector, 
+                                'dup_a' : dup_a_id if bug_id == dup_a_id else dup_b_id,
+                                'dup_b' : dup_a_id if bug_id == dup_b_id else dup_b_id })
+
+    def get_info(self, bug):
+        info = np.concatenate((
+            self.baseline.to_one_hot(bug['bug_severity'], self.baseline.info_dict['bug_severity']),
+            self.baseline.to_one_hot(bug['bug_status'], self.baseline.info_dict['bug_status']),
+            self.baseline.to_one_hot(bug['component'], self.baseline.info_dict['component']),
+            self.baseline.to_one_hot(bug['priority'], self.baseline.info_dict['priority']),
+            self.baseline.to_one_hot(bug['product'], self.baseline.info_dict['product']),
+            self.baseline.to_one_hot(bug['version'], self.baseline.info_dict['version']))
+        )
+        return info
 
     def create_bug_clusters(self, bug_set_cluster, bugs):
         index = 0
@@ -114,13 +138,13 @@ class Retrieval():
             bug_set_cluster[indices[index+1][:1][0]] = dup_b_id
             index += 2
 
-    def run(self, path, path_buckets, path_train, path_test):
+    def run(self, path, dataset, path_buckets, path_train, path_test):
 
         MAX_SEQUENCE_LENGTH_T = 100 # Title
         MAX_SEQUENCE_LENGTH_D = 100 # Description
 
         # Create the instance from baseline
-        self.baseline = Baseline(path, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
+        self.baseline = Baseline(path, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
 
         df = pd.read_csv(path_buckets)
 
@@ -156,6 +180,7 @@ if __name__ == '__main__':
     retrieval = Retrieval()
     retrieval.run(
         'data/processed/eclipse', 
+        'eclipse.csv',
         'data/normalized/eclipse/eclipse.csv', 
         'data/processed/eclipse/train.txt', 
         'data/processed/eclipse/test.txt')
