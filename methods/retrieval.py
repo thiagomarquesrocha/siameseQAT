@@ -103,10 +103,10 @@ class Retrieval():
             dup_a_id, dup_b_id = row
             bug_unique.add(dup_a_id)
             bug_unique.add(dup_b_id)
-        for bug_id in tqdm(list(bug_unique)):
+        for bug_id in tqdm(bug_unique):
             bug = bug_set[bug_id]
             bug_vector = self.model.predict([[self.get_info(bug)], [bug['title_word']], [bug['description_word']]])[0]
-            vectorized.append(bug_vector)
+            vectorized.append({ 'vector' : bug_vector, 'bug_id' : bug_id })
     def infer_vector_test(self, bugs, vectorized):
         bug_set = self.baseline.get_bug_set()
         for row in tqdm(bugs):
