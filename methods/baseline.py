@@ -33,19 +33,21 @@ class Baseline:
         self.bug_ids = []
 
         self.train_data = None
-        self.dup_sets = None
+        self.test_data = None
+        self.dup_sets_train = None
+        self.dup_sets_test = None
         self.bug_set = {}
 
         self.DIR = DIR
         self.GLOVE_DIR = ""
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
-        self.get_info_dict(DIR, dataset)
+        self.get_info_dict(dataset)
 
-    def get_info_dict(self, data, dataset):
+    def get_info_dict(self, dataset):
         if dataset is None: return
         # self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
-        df = pd.read_csv(os.path.join(data, dataset))
+        df = pd.read_csv(dataset)
         self.info_dict = {
             'bug_severity' : df['bug_severity'].unique().shape[0],
             'bug_status' : df['bug_status'].unique().shape[0],
@@ -296,6 +298,31 @@ class Baseline:
         return data_pairs, data_dup_sets
 
     @staticmethod
+    def read_test_data(data):
+        print("Reading the test...")
+        test = []
+        with open(os.path.join(data, 'test.txt'), 'r') as file_test:
+            for row in tqdm(file_test):
+                duplicates = np.array(row.split(' '), int)
+                # Create the test queries
+                query = duplicates[0]
+                duplicates = np.delete(duplicates, 0)
+                while duplicates.shape[0] > 0:
+                    dup = duplicates[0]
+                    duplicates = np.delete(duplicates, 0)
+                    test.append([query, dup])
+
+        data_pairs = []
+        data_dup_sets = {}
+        print('Reading test data')
+        for bug1, bug2 in test:
+            data_pairs.append([int(bug1), int(bug2)])
+            if int(bug1) not in data_dup_sets.keys():
+                data_dup_sets[int(bug1)] = set()
+            data_dup_sets[int(bug1)].add(int(bug2))
+        return data_pairs, data_dup_sets
+
+    @staticmethod
     def read_bug_ids(data):
         bug_ids = []
         print('Reading bug ids')
@@ -310,7 +337,9 @@ class Baseline:
         # global dup_sets
         # global bug_ids
         if not self.train_data:
-            self.train_data, self.dup_sets = Baseline.read_train_data(self.DIR)
+            self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR)
+        if not self.test_data:
+            self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR)
             #print(len(train_data))
         if not self.bug_ids:
             self.bug_ids = Baseline.read_bug_ids(self.DIR)
@@ -367,32 +396,32 @@ class Baseline:
     # data - path
     # batch_size - 128
     # n_neg - 1
-    def batch_iterator(self, data, batch_size, n_neg):
+    def batch_iterator(self, data, dup_sets, batch_size, n_neg):
         # global train_data
         # global self.dup_sets
         # global self.bug_ids
         # global self.bug_set
 
-        random.shuffle(self.train_data)
+        random.shuffle(data)
 
         batch_input, batch_pos, batch_neg = {'title' : [], 'desc' : [], 'info' : []}, \
                                                 {'title' : [], 'desc' : [], 'info' : []}, \
                                                     {'title' : [], 'desc' : [], 'info' : []}
 
-        n_train = len(self.train_data)
+        n_train = len(data)
 
         batch_triplets = []
         
         for offset in range(batch_size):
-            neg_bug = Baseline.get_neg_bug(self.dup_sets[self.train_data[offset][0]], self.bug_ids)
-            anchor, pos, neg = self.train_data[offset][0], self.train_data[offset][1], neg_bug
+            neg_bug = Baseline.get_neg_bug(dup_sets[data[offset][0]], self.bug_ids)
+            anchor, pos, neg = data[offset][0], data[offset][1], neg_bug
             bug_anchor = self.bug_set[anchor]
             bug_pos = self.bug_set[pos]
             bug_neg = self.bug_set[neg]
             self.read_batch_bugs(batch_input, bug_anchor)
             self.read_batch_bugs(batch_pos, bug_pos)
             self.read_batch_bugs(batch_neg, bug_neg)
-            batch_triplets.append([self.train_data[offset][0], self.train_data[offset][1], neg_bug])
+            batch_triplets.append([data[offset][0], data[offset][1], neg_bug])
 
         batch_input['title'] = np.array(batch_input['title'])
         batch_input['desc'] = np.array(batch_input['desc'])
