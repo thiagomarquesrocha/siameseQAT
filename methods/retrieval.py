@@ -13,6 +13,7 @@ from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
         MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
 from keras.models import Model
 from sklearn.neighbors import NearestNeighbors
+from operator import itemgetter
 
 class Retrieval():
     def __init__(self):
@@ -68,26 +69,8 @@ class Retrieval():
         
         # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
         similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
-
-        bug_t = Input(shape = (MAX_SEQUENCE_LENGTH_T, ), name = 'title')
-        bug_d = Input(shape = (MAX_SEQUENCE_LENGTH_D, ), name = 'desc')
-        bug_i = Input(shape = (MAX_SEQUENCE_INFO, ), name = 'info')
-        # Encoder
-        title_encoder = similarity_model.get_layer('FeatureLstmGenerationModel')
-        desc_encoder = similarity_model.get_layer('FeatureCNNGenerationModel')
-        info_encoder = similarity_model.get_layer('FeatureMlpGenerationModel')
-        # Bug feature
-        bug_encoded_t = title_encoder(bug_t)
-        bug_encoded_d = desc_encoder(bug_d)
-        bug_encoded_i = info_encoder(bug_i)
-
-        model = similarity_model.get_layer('merge_features_in')
-        output = model([bug_encoded_i, bug_encoded_t, bug_encoded_d])
-
-        model = Model(inputs=[bug_i, bug_t, bug_d], outputs=[output])
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics = ['accuracy'])
         
-        self.model = model
+        self.model = similarity_model
 
     def read_train(self, path_data):
         self.train = []
@@ -96,27 +79,47 @@ class Retrieval():
                 dup_a_id, dup_b_id = np.array(row.split(' '), int)
                 self.train.append([dup_a_id, dup_b_id])
 
-    def infer_vector_train(self, bugs, vectorized):
+    def infer_vector_train(self, bugs):
         bug_set = self.baseline.get_bug_set()
         bug_unique = set()
         for row in tqdm(bugs):
             dup_a_id, dup_b_id = row
             bug_unique.add(dup_a_id)
             bug_unique.add(dup_b_id)
-        for bug_id in tqdm(bug_unique):
-            bug = bug_set[bug_id]
-            bug_vector = self.model.predict([[self.get_info(bug)], [bug['title_word']], [bug['description_word']]])[0]
-            vectorized.append({ 'vector' : bug_vector, 'bug_id' : bug_id })
-    def infer_vector_test(self, bugs, vectorized):
+        self.bugs_train = bug_unique
+
+    def infer_vector_test(self, bugs, result):
         bug_set = self.baseline.get_bug_set()
+        print("Selecting buckets duplicates...")
+        buckets_duplicates = [key for key in tqdm(self.buckets) if len(self.buckets[key]) > 1]
+        test_no_present_in_trained = []
+        print("Selecting only bugs did not used in the train...")
         for row in tqdm(bugs):
-            for bug_id in row:
-                dup_a_id, dup_b_id = row
-                bug = bug_set[bug_id]
-                bug_vector = self.model.predict([[self.get_info(bug)], [bug['title_word']], [bug['description_word']]])[0]
-                vectorized.append({ 'vector' : bug_vector, 
-                                'dup_a' : dup_a_id if bug_id == dup_a_id else dup_b_id,
-                                'dup_b' : dup_a_id if bug_id == dup_b_id else dup_b_id })
+            dup_a_id, dup_b_id = row
+            diff = list(set(row) - self.bugs_train)
+            test_no_present_in_trained += diff
+        print("Formating the rank result the retrieval model...")
+        queries = []
+        for bug_id in test_no_present_in_trained:
+            queries += [(bug_id, master_id) for master_id in buckets_duplicates]
+        last_query = { 'bug_id' : -1, 'master_id' : -1 }
+        rank = []
+        for bug_id, master_id in tqdm(queries):
+            bug = bug_set[bug_id]
+            master = bug_set[master_id]
+            if bug_id != last_query['bug_id']:
+                if len(rank) > 0:
+                    rank=sorted(rank, key = itemgetter(1), reverse = True)
+                    result.append({ 'rank' : rank, 
+                                    'dup_a' : last_query['bug_id'],
+                                    'dup_b' : last_query['master_id'] })
+                rank = []
+            bug_vector = self.model.predict([ [bug['title_word']], [master['title_word']], 
+                                        [bug['description_word']], [master['description_word']],
+                                        [self.get_info(bug)], [self.get_info(master)] ])[0]
+            rank.append((master_id, bug_vector[1]))
+            last_query['master_id'] = master_id
+            last_query['bug_id'] = bug_id
 
     def get_info(self, bug):
         info = np.concatenate((
