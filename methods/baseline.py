@@ -6,7 +6,7 @@ import _pickle as pickle
 from sklearn.manifold import TSNE
 import random
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 
 from keras.utils import to_categorical
 from sklearn.preprocessing import LabelEncoder
@@ -251,18 +251,24 @@ class Baseline:
         return embed
 
     def load_preprocess(self):   
+        removed = []
         for bug_id in tqdm(self.bug_ids):
-            bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-        #     print(str(bug['title_word']))
-            title = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_T, 'title_word', bug)
-            desc = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_D, 'description_word', bug)
-            #print(len(title), len(desc))
-            #print(",".join(title.astype(str)))
-            self.sentence_dict[",".join(title.astype(str))] = bug['title']
-            self.sentence_dict[",".join(desc.astype(str))] = bug['description']
-            self.corpus.append(bug['title'])
-            self.corpus.append(bug['description'])
-        #     break
+            try:
+                bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
+            #     print(str(bug['title_word']))
+                title = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_T, 'title_word', bug)
+                desc = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_D, 'description_word', bug)
+                #print(len(title), len(desc))
+                #print(",".join(title.astype(str)))
+                self.sentence_dict[",".join(title.astype(str))] = bug['title']
+                self.sentence_dict[",".join(desc.astype(str))] = bug['description']
+                self.corpus.append(bug['title'])
+                self.corpus.append(bug['description'])
+            #     break
+            except:
+                removed.append(bug_id)
+        if len(removed) > 0:
+            print("Removed", removed)
 
     @staticmethod
     def get_neg_bug(invalid_bugs, bug_ids):
@@ -344,9 +350,9 @@ class Baseline:
         if not self.bug_ids:
             self.bug_ids = Baseline.read_bug_ids(self.DIR)
 
-    def siam_gen(self, batch_size, n_neg):
+    def siam_gen(self, data, dup_set, batch_size, n_neg):
         while True:
-            input_sample, input_pos, input_neg, sim = self.batch_iterator(self.DIR, batch_size, n_neg)
+            input_sample, input_pos, input_neg, sim = self.batch_iterator(data, dup_set, batch_size, n_neg)
             yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
             'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'],
             'info_in' : input_sample['info'], 'info_pos' : input_pos['info'], 'info_neg' : input_neg['info'] }, sim)
@@ -455,17 +461,20 @@ class Baseline:
         loop = tqdm(total=len(self.bug_ids))
 
         for bug_id in self.bug_ids:
-            self.bug_set[bug_id] = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-            self.bug_set[bug_id]['description_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['description_word'], self.MAX_SEQUENCE_LENGTH_D)
-            self.bug_set[bug_id]['title_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['title_word'], self.MAX_SEQUENCE_LENGTH_T)
+            try:
+                self.bug_set[bug_id] = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
+                self.bug_set[bug_id]['description_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['description_word'], self.MAX_SEQUENCE_LENGTH_D)
+                self.bug_set[bug_id]['title_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['title_word'], self.MAX_SEQUENCE_LENGTH_T)
+            except:
+                continue
             loop.update(1)
         loop.close()
 
     def get_bug_set(self):
         return self.bug_set
 
-    def display_batch(self, nb):
-        input_sample, input_pos, input_neg, v_sim = self.batch_iterator(self.DIR, nb, 1)
+    def display_batch(self, data, dup_set, nb):
+        input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, nb, 1)
 
         t_a, t_b, d_a, d_b = [], [], [], []
         
@@ -533,17 +542,18 @@ class Baseline:
     @staticmethod
     def cosine_distance(inputs):
         x, y = inputs
-        x = Baseline.l2_normalize(x, axis=-1)
-        y = Baseline.l2_normalize(y, axis=-1)
+        #x = Baseline.l2_normalize(x, axis=-1)
+        #y = Baseline.l2_normalize(y, axis=-1)
         similarity = K.batch_dot(x, y, axes=1)
         distance = K.constant(1) - similarity
         # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
         # positive (which is the case after ReLU activation).
-        return K.mean(distance, axis=-1)
+        return K.squeeze(distance, axis=-1)
     @staticmethod
     def margin_loss(y_true, y_pred):
         margin = K.constant(1.0)
-        return K.mean(K.maximum(0.0, margin - y_pred[0] + y_pred[1]))
+        loss = K.maximum(0.0, margin - y_pred[0] +  y_pred[1])
+        return K.mean(loss)
     @staticmethod
     def pos_distance(y_true, y_pred):
         return K.mean(y_pred[0])
@@ -552,6 +562,7 @@ class Baseline:
         return K.mean(y_pred[1])
     @staticmethod
     def stack_tensors(vects):
-        return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
+        return K.stack(vects)
+        # return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
         # better method is to use concatenate
-        return K.concatenate(vects,axis=1)
+        # return K.concatenate(vects,axis=1)
