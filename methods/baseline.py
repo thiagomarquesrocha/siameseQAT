@@ -532,7 +532,7 @@ class Baseline:
                 # words not found in embedding index will be all-zeros.
                 self.embedding_matrix[i] = embedding_vector
             else:
-                self.embedding_matrix[i] = np.repeat(1, EMBEDDING_DIM)
+                # self.embedding_matrix[i] = np.repeat(1, EMBEDDING_DIM)
                 words_not_found.append(word)
         print("Total of words not found: ", len(words_not_found))
         print("Sample words not found: ", np.random.choice(words_not_found, 10))
