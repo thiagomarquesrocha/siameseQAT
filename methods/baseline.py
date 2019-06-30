@@ -453,7 +453,7 @@ class Baseline:
         input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
         input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
 
-        return input_sample, input_pos, input_neg, sim #sim
+        return batch_triplets, input_sample, input_pos, input_neg, sim #sim
 
     def load_bugs(self):
         self.bug_set = {}
@@ -510,33 +510,49 @@ class Baseline:
         
         return word_index
 
-    def generating_embed(self, GLOVE_DIR, EMBEDDING_DIM, MAX_NB_WORDS):
+    def load_vocabulary(vocab_file):
+        try:
+            with open(vocab_file, 'rb') as f:
+                vocab = pickle.load(f)
+                print('vocabulary loaded')
+                return vocab
+        except IOError:
+            print('can not load vocabulary')
+            sys.exit(0)
+    
+    def generating_embed(self, GLOVE_DIR, EMBEDDING_DIM):
         embeddings_index = {}
         f = open(os.path.join(GLOVE_DIR, 'glove.42B.300d.txt'), 'rb')
-        for line in tqdm(f):
+        loop = tqdm(f)
+        loop.set_description("Loading Glove")
+        for line in loop:
             values = line.split()
             word = values[0]
             coefs = np.asarray(values[1:], dtype='float32')
             embeddings_index[word] = coefs
+            loop.update()
         f.close()
+        loop.close()
 
         print('Total %s word vectors in Glove 42B 300d.' % len(embeddings_index))
 
-        self.word_index = self.word_index_count(self.corpus, MAX_NB_WORDS)
+        vocab = self.load_vocabulary(os.path.join(self.DIR, 'word_vocab.pkl'))
+        vocab_size = len(vocab)
 
-        self.embedding_matrix = np.random.random((len(self.word_index) + 1, EMBEDDING_DIM))
-        words_not_found = []
-        for word, i in tqdm(self.word_index.items()):
+        # Initialize uniform the vector considering the Tanh activation
+        embedding_matrix = np.random.uniform(-1.0, 1.0, (vocab_size, EMBEDDING_DIM))
+        embedding_matrix[0, :] = np.zeros(EMBEDDING_DIM)
+
+        oov_count = 0
+        for word, i in vocab.items():
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
                 # words not found in embedding index will be all-zeros.
-                self.embedding_matrix[i] = embedding_vector
+                embedding_matrix[i] = embedding_vector
             else:
-                # self.embedding_matrix[i] = np.repeat(1, EMBEDDING_DIM)
-                words_not_found.append(word)
-        print("Total of words not found: ", len(words_not_found))
-        print("Sample words not found: ", np.random.choice(words_not_found, 10))
-        self.words_not_found = words_not_found
+                oov_count += 1
+        print('Number of OOV words: %d' % oov_count)
+        self.embedding_matrix = embedding_matrix
 
     ############################# CUSTOM LOSS #####################################
     @staticmethod
