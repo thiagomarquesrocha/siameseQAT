@@ -474,7 +474,7 @@ class Baseline:
         return self.bug_set
 
     def display_batch(self, data, dup_set, nb):
-        input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, nb, 1)
+        _, input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, nb, 1)
 
         t_a, t_b, d_a, d_b = [], [], [], []
         
