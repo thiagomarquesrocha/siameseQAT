@@ -54,7 +54,7 @@ class Preprocess:
 
   def __init__(self, DATASET, DOMAIN, PAIRS):
     self.MAX_NB_WORDS = 20000
-    self.VALIDATION_SPLIT = 0.8
+    self.VALIDATION_SPLIT = 0.9
     self.DIR = 'data/processed' # where will be exported
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
