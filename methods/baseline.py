@@ -510,7 +510,7 @@ class Baseline:
         
         return word_index
 
-    def load_vocabulary(vocab_file):
+    def load_vocabulary(self, vocab_file):
         try:
             with open(vocab_file, 'rb') as f:
                 vocab = pickle.load(f)
