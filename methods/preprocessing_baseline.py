@@ -39,16 +39,16 @@ class Preprocess:
     'LANGUAGE': 'language',
     'DATE': 'date',
     'TIME': 'time',
-    'PERCENT': 'percent',
-    'MONEY': 'money',
-    'QUANTITY': 'quantity',
-    'ORDINAL': 'ordinal',
-    'CARDINAL': 'cardinal',
-    # 'PERCENT': 'number',
-    # 'MONEY': 'number',
-    # 'QUANTITY': 'number',
-    # 'ORDINAL': 'number',
-    # 'CARDINAL': 'number',
+    # 'PERCENT': 'percent',
+    # 'MONEY': 'money',
+    # 'QUANTITY': 'quantity',
+    # 'ORDINAL': 'ordinal',
+    # 'CARDINAL': 'cardinal',
+    'PERCENT': 'number',
+    'MONEY': 'number',
+    'QUANTITY': 'number',
+    'ORDINAL': 'number',
+    'CARDINAL': 'number',
     'LAW': 'law'
 }
 
@@ -118,10 +118,11 @@ class Preprocess:
 
   def normalize_text(self, text):
     #try:
-    text = re.sub(r'\d+((\s\d+)+)?', '', str(text))
-    text = self.ner(text)
-    tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
+    tokens = re.compile(r'[\W_]+', re.UNICODE).split(str(text))
     text = ' '.join([self.func_name_tokenize(token) for token in tokens])
+    text = re.sub(r'\d+((\s\d+)+)?', 'number', text)
+    text = text[:100000] # limit of spacy lib
+    text = self.ner(text)
     #except:
     #  return 'description'
     return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
@@ -341,7 +342,7 @@ def main():
         'PAIRS' : 'eclipse_pairs'
       },
       'eclipse_small' : {
-        'DATASET' : 'eclipse',
+        'DATASET' : 'eclipse_small',
         'DOMAIN' : 'eclipse_small',
         'PAIRS' : 'eclipse_small_pairs'
       },
@@ -352,8 +353,8 @@ def main():
       },
       'openoffice' : {
         'DATASET' : 'openoffice',
-        'DOMAIN' : 'openOffice',
-        'PAIRS' : 'openOffice_pairs'
+        'DOMAIN' : 'openoffice',
+        'PAIRS' : 'openoffice_pairs'
       }
     }
 
