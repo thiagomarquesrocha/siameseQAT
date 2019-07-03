@@ -268,7 +268,10 @@ class Baseline:
             except:
                 removed.append(bug_id)
         if len(removed) > 0:
-            print("Removed", removed)
+            for x in removed:
+                self.bug_ids.remove(x)
+            self.removed = removed
+            print("{} were removed. To see the list call self.removed".format(len(removed)))
 
     @staticmethod
     def get_neg_bug(invalid_bugs, bug_ids):
@@ -557,21 +560,21 @@ class Baseline:
     ############################# CUSTOM LOSS #####################################
     @staticmethod
     def l2_normalize(x, axis):
-        norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=True))
-        return K.maximum(x, K.epsilon()) / K.maximum(norm, K.epsilon())
+        norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=False))
+        return K.maximum(x, K.epsilon()), K.maximum(norm, K.epsilon())
 
     # https://github.com/keras-team/keras/issues/3031
     # https://github.com/keras-team/keras/issues/8335
     @staticmethod
     def cosine_distance(inputs):
         x, y = inputs
-        #x = Baseline.l2_normalize(x, axis=-1)
-        #y = Baseline.l2_normalize(y, axis=-1)
-        similarity = K.batch_dot(x, y, axes=1)
-        distance = K.constant(1) - similarity
+        x, x_norm = l2_normalize(x, axis=-1)
+        y, y_norm = l2_normalize(y, axis=-1)
+        distance = K.sum( x * y, axis=-1) / (x_norm * y_norm)
+        distance = (distance + K.constant(1)) / K.constant(2)
         # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
         # positive (which is the case after ReLU activation).
-        return K.squeeze(distance, axis=-1)
+        return distance
     @staticmethod
     def margin_loss(y_true, y_pred):
         margin = K.constant(1.0)
