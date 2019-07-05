@@ -22,6 +22,8 @@ from multiprocessing import Pool
 import multiprocessing
 import sys
 import spacy
+import os.path
+from os import path
 
 class Preprocess:
 
@@ -60,6 +62,8 @@ class Preprocess:
     self.DOMAIN=DOMAIN
     self.PAIRS = PAIRS
     self.nlp = spacy.load('en_core_web_sm')
+    self.bugs = {}
+    self.bugs_saved = []
 
   def read_pairs(self, df):
     bug_pairs = []
@@ -120,12 +124,14 @@ class Preprocess:
     #try:
     tokens = re.compile(r'[\W_]+', re.UNICODE).split(str(text))
     text = ' '.join([self.func_name_tokenize(token) for token in tokens])
-    text = re.sub(r'\d+((\s\d+)+)?', 'number', text)
+    text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
     text = text[:100000] # limit of spacy lib
     text = self.ner(text)
     #except:
     #  return 'description'
-    return ' '.join([word.lower() for word in nltk.word_tokenize(text)])
+    text = [word.lower() for word in nltk.word_tokenize(text)]
+    text = ' '.join([word for word in text if len(word) > 1])
+    return text
 
   def save_dict(self, set, filename):
     with open(filename, 'w') as f:
@@ -221,6 +227,7 @@ class Preprocess:
       version_dict = self.load_dict(os.path.join(self.DIR,'version.dic'))
       component_dict = self.load_dict(os.path.join(self.DIR,'component.dic'))
       bug_status_dict = self.load_dict(os.path.join(self.DIR,'bug_status.dic'))
+
       with open(os.path.join(self.DIR, 'normalized_bugs.json'), 'r') as f:
           #loop = tqdm(f)
           with tqdm(total=total) as loop:
@@ -252,40 +259,51 @@ class Preprocess:
           bug['title_word'] = [word_vocab.get(w, UNK) for w in bug['title'].split()]
           #bug.pop('description')
           #bug.pop('title')
+          self.bugs[bug['issue_id']] = bug
           with open(os.path.join(bug_dir, str(bug['issue_id']) + '.pkl'), 'wb') as f:
               pickle.dump(bug, f)
+          self.bugs_saved.append(bug['issue_id'])
 
   def processing_dump(self, bugs, word_vocab):
       #clear_output()
-      cpu = os.cpu_count() - 1
-      pool = Pool(processes=cpu) # start 4 worker processes
+      #cpu = os.cpu_count() - 1
+      #pool = Pool(processes=cpu) # start 4 worker processes
       bug_dir = os.path.join(self.DIR, 'bugs')
-      print("Starting the slice ...")
-      works = []
-      n = len(bugs) // cpu
-      n = 1 if n == 0 else n
-      sliced = []
-      pos_end = n
-      end = len(bugs)
-      for i in range(cpu):
-          pos_end = end if pos_end>=end else pos_end
-          pos_end = end if (i+1) == cpu and pos_end < end else pos_end
-          sliced.append(bugs[i*n:pos_end])
-          pos_end += n
+      #print("Starting the slice ...")
+      # works = []
+      # n = len(bugs) // cpu
+      # n = 1 if n == 0 else n
+      # sliced = []
+      # pos_end = n
+      # end = len(bugs)
+      # for i in range(cpu):
+      #     pos_end = end if pos_end>=end else pos_end
+      #     pos_end = end if (i+1) == cpu and pos_end < end else pos_end
+      #     sliced.append(bugs[i*n:pos_end])
+      #     pos_end += n
 
-      print("Slicing done!")
-      for s in sliced:
-          if len(s) > 0:
-              works.append(pool.apply_async(self.dump_vocabulary, (s, word_vocab, bug_dir, )))
-              #dump_vocabulary(s, bug_dir)
+      # print("Slicing done!")
+      # for s in sliced:
+      #     if len(s) > 0:
+      #         works.append(pool.apply_async(self.dump_vocabulary, (s, word_vocab, bug_dir, )))
+      #         #dump_vocabulary(s, bug_dir)
 
-      print("Executing the works...")
-      res = [w.get() for w in works]
+      # print("Executing the works...")
+      # res = [w.get() for w in works]
 
-      # dump_vocabulary(bugs, word_vocab, bug_dir)
+      self.dump_vocabulary(bugs, word_vocab, bug_dir)
+
+      self.check_if_all_bugs_are_save(bug_dir)
 
       print("All done!")
 
+  def check_if_all_bugs_are_save(self, bug_dir):
+      print("Check if all bugs were saved")
+      for bug in self.bugs_saved:
+        if not path.exists(os.path.join(bug_dir, 'bugs', '{}.pkl'.format(bug))):
+          print("Resaving bug: {}".format(bug))
+          with open(os.path.join(bug_dir, str(bug) + '.pkl'), 'wb') as f:
+              pickle.dump(self.bugs[bug], f)
   def run(self):
     
       # create dataset directory

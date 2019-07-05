@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 
 import os
 import sys
@@ -59,10 +59,7 @@ class Retrieval():
                 # Create the test queries
                 query = duplicates[0]
                 duplicates = np.delete(duplicates, 0)
-                while duplicates.shape[0] > 0:
-                    dup = duplicates[0]
-                    duplicates = np.delete(duplicates, 0)
-                    test.append([query, dup])
+                test.append([query, duplicates.tolist()])
         self.test = test
 
     def read_model(self, name, MAX_SEQUENCE_INFO, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
