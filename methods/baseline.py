@@ -58,10 +58,7 @@ class Baseline:
         }
 
     def load_ids(self, DIR):
-        self.bug_ids = []
-        with open(os.path.join(DIR, 'bug_ids.txt'), 'r') as f:
-            for row in f:
-                self.bug_ids.append(int(row))
+        self.bug_ids = self.read_bug_ids(DIR)
 
     @staticmethod
     def validation_accuracy_loss(history):
@@ -111,7 +108,7 @@ class Baseline:
     def show_model_output(valid_a, valid_b, valid_sim, model, nb_examples = 3):
         #pv_a, pv_b, pv_sim = gen_random_batch(test_groups, nb_examples)
         pred_sim = model.predict([valid_a, valid_b])
-    #     pred_sim = [1,1,1,1,1,1]
+        #     pred_sim = [1,1,1,1,1,1]
         for b_a, b_b, sim, pred in zip(valid_a, valid_b, valid_sim, pred_sim):
             key_a = ','.join(b_a.astype(str))
             key_b = ','.join(b_b.astype(str))
@@ -136,17 +133,14 @@ class Baseline:
         return loaded_model
 
     @staticmethod
-    def save_model(DIR, model, name):
-        m_dir = os.path.join(DIR, 'modelos')
+    def save_model(model, name, verbose=0):
+        m_dir = os.path.join('modelos')
         if not os.path.exists(m_dir):
             os.mkdir(m_dir)
-        # serialize model to JSON
-        model_json = model.to_json()
-        with open(os.path.join(m_dir, "model_{}.json".format(name)), 'w') as json_file:
-            json_file.write(model_json)
-        # serialize weights to HDF5
-        model.save_weights(os.path.join(m_dir, "model_{}.h5".format(name)))
-        print("Saved model to disk")
+        export = os.path.join(m_dir, "model_{}.h5".format(name))
+        model.save(export)
+        if(verbose):
+            print("Saved model '{}' to disk".format(export))
 
     @staticmethod
     def save_result(DIR, h, name):
@@ -238,35 +232,33 @@ class Baseline:
 
         Baseline.plot_2d(valid_sim, tsne_features)
 
-    @staticmethod
-    def padding_embed(max_char, field, bug):
-        n = len(bug[field])
-        if (max_char - n) > 0: # desc or title
-            embed = np.empty(max_char - n)
-            embed.fill(0)
-            embed = np.concatenate([embed, bug[field]], axis=-1)
-            embed = embed.astype(int)
-        else:
-            embed = np.array(bug[field][:max_char])
-        return embed
-
-    def load_preprocess(self):   
+    def load_bugs(self):   
         removed = []
+        self.corpus = []
+        self.sentence_dict = {}
+        self.bug_set = {}
+        title_padding, desc_padding = [], []
         for bug_id in tqdm(self.bug_ids):
             try:
                 bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-            #     print(str(bug['title_word']))
-                title = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_T, 'title_word', bug)
-                desc = Baseline.padding_embed(self.MAX_SEQUENCE_LENGTH_D, 'description_word', bug)
-                #print(len(title), len(desc))
-                #print(",".join(title.astype(str)))
-                self.sentence_dict[",".join(title.astype(str))] = bug['title']
-                self.sentence_dict[",".join(desc.astype(str))] = bug['description']
-                self.corpus.append(bug['title'])
-                self.corpus.append(bug['description'])
-            #     break
+                title_padding.append(bug['title_word'])
+                desc_padding.append(bug['description_word'])
+                self.bug_set[bug_id] = bug
+                #break
             except:
                 removed.append(bug_id)
+        
+        # Padding
+        title_padding = Baseline.data_padding(title_padding, 100)
+        desc_padding = Baseline.data_padding(desc_padding, 500)
+        
+        for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
+            self.bug_set[bug_id]['title_word'] = bug_title
+            self.bug_set[bug_id]['description_word'] = bug_desc
+            bug = self.bug_set[bug_id]
+            self.sentence_dict[",".join(bug_title.astype(str))] = bug['title']
+            self.sentence_dict[",".join(bug_desc.astype(str))] = bug['description']
+    
         if len(removed) > 0:
             for x in removed:
                 self.bug_ids.remove(x)
@@ -307,31 +299,6 @@ class Baseline:
         return data_pairs, data_dup_sets
 
     @staticmethod
-    def read_test_data(data):
-        print("Reading the test...")
-        test = []
-        with open(os.path.join(data, 'test.txt'), 'r') as file_test:
-            for row in tqdm(file_test):
-                duplicates = np.array(row.split(' '), int)
-                # Create the test queries
-                query = duplicates[0]
-                duplicates = np.delete(duplicates, 0)
-                while duplicates.shape[0] > 0:
-                    dup = duplicates[0]
-                    duplicates = np.delete(duplicates, 0)
-                    test.append([query, dup])
-
-        data_pairs = []
-        data_dup_sets = {}
-        print('Reading test data')
-        for bug1, bug2 in test:
-            data_pairs.append([int(bug1), int(bug2)])
-            if int(bug1) not in data_dup_sets.keys():
-                data_dup_sets[int(bug1)] = set()
-            data_dup_sets[int(bug1)].add(int(bug2))
-        return data_pairs, data_dup_sets
-
-    @staticmethod
     def read_bug_ids(data):
         bug_ids = []
         print('Reading bug ids')
@@ -366,26 +333,15 @@ class Baseline:
         return one_hot
 
     @staticmethod
-    def data_padding_bug(seq, max_seq_length):
-        seq = seq[:max_seq_length]
-        padding = max_seq_length - len(seq)
-        if padding > 0:
-            embed = np.empty(padding)
-            embed.fill(0)
-            return np.concatenate([embed, seq], -1).astype(int)
-        else:
-            return np.array(seq).astype(int)
-
-    @staticmethod
     def data_padding(data, max_seq_length):
+        seq_lengths = [len(seq) for seq in data]
+        seq_lengths.append(6)
+        max_seq_length = min(max(seq_lengths), max_seq_length)
         padded_data = np.zeros(shape=[len(data), max_seq_length])
         for i, seq in enumerate(data):
             seq = seq[:max_seq_length]
-            padding_end = max_seq_length - len(seq)
-            #print(seq)
-            embed = np.empty(padding_end)
-            embed.fill(0)
-            padded_data[i] = np.concatenate([embed, seq], -1)
+            for j, token in enumerate(seq):
+                padded_data[i, j] = int(token)
         return padded_data.astype(np.int)
 
     def read_batch_bugs(self, batch, bug):
@@ -442,7 +398,7 @@ class Baseline:
         batch_neg['desc'] = np.array(batch_neg['desc'])
         batch_neg['info'] = np.array(batch_neg['info'])
 
-        n_half = batch_size // 2
+        n_half = len(batch_triplets) // 2
         if n_half > 0:
             pos = np.full((1, n_half), 1)
             neg = np.full((1, n_half), 0)
@@ -457,21 +413,6 @@ class Baseline:
         input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
 
         return batch_triplets, input_sample, input_pos, input_neg, sim #sim
-
-    def load_bugs(self):
-        self.bug_set = {}
-
-        loop = tqdm(total=len(self.bug_ids))
-
-        for bug_id in self.bug_ids:
-            try:
-                self.bug_set[bug_id] = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-                self.bug_set[bug_id]['description_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['description_word'], self.MAX_SEQUENCE_LENGTH_D)
-                self.bug_set[bug_id]['title_word'] = Baseline.data_padding_bug(self.bug_set[bug_id]['title_word'], self.MAX_SEQUENCE_LENGTH_T)
-            except:
-                continue
-            loop.update(1)
-        loop.close()
 
     def get_bug_set(self):
         return self.bug_set
@@ -504,14 +445,6 @@ class Baseline:
             print("***Description***: {}".format(self.sentence_dict[key_d_b]))
             print("***similar =", str(sim))
             print("########################")
-
-    def word_index_count(self, corpus, MAX_NB_WORDS):
-        tokenizer = Tokenizer(num_words=MAX_NB_WORDS)
-        tokenizer.fit_on_texts(corpus)
-        word_index = tokenizer.word_index
-        print('Found %s unique tokens.' % len(word_index))
-        
-        return word_index
 
     def load_vocabulary(self, vocab_file):
         try:
