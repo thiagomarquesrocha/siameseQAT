@@ -54,10 +54,11 @@ class Preprocess:
     'LAW': 'law'
 }
 
-  def __init__(self, DATASET, DOMAIN, PAIRS):
+  def __init__(self, DATASET, DOMAIN, PAIRS, COLAB):
     self.MAX_NB_WORDS = 20000
     self.VALIDATION_SPLIT = 0.9
-    self.DIR = 'data/processed' # where will be exported
+    self.COLAB = COLAB
+    self.DIR = '{}data/processed'.format(COLAB) # where will be exported
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
     self.PAIRS = PAIRS
@@ -156,6 +157,7 @@ class Preprocess:
     bug_statuses = set()
     text = []
     normalized_bugs = open(os.path.join(self.DIR, 'normalized_bugs.json'), 'w')
+    print("Total:", df.shape[0])
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
           bug = row[1]
@@ -170,7 +172,7 @@ class Preprocess:
               bug['title'] = self.normalize_text(bug['title'])
           else:
               bug['title'] = ''
-          
+
           normalized_bugs.write('{}\n'.format(bug.to_json()))
 
           text.append(bug['description'])
@@ -264,7 +266,7 @@ class Preprocess:
               pickle.dump(bug, f)
           self.bugs_saved.append(bug['issue_id'])
 
-  def processing_dump(self, bugs, word_vocab):
+  def processing_dump(self, bugs, word_vocab, bugs_id, bugs_id_dataset):
       #clear_output()
       #cpu = os.cpu_count() - 1
       #pool = Pool(processes=cpu) # start 4 worker processes
@@ -293,17 +295,28 @@ class Preprocess:
 
       self.dump_vocabulary(bugs, word_vocab, bug_dir)
 
-      self.check_if_all_bugs_are_save(bug_dir)
+      self.validing_bugs_id(bugs_id, bugs_id_dataset)
 
       print("All done!")
 
-  def check_if_all_bugs_are_save(self, bug_dir):
-      print("Check if all bugs were saved")
-      for bug in self.bugs_saved:
-        if not path.exists(os.path.join(bug_dir, 'bugs', '{}.pkl'.format(bug))):
-          print("Resaving bug: {}".format(bug))
-          with open(os.path.join(bug_dir, str(bug) + '.pkl'), 'wb') as f:
-              pickle.dump(self.bugs[bug], f)
+  def validing_bugs_id(self, bugs_id, bugs_id_dataset):
+      print("Check if all bugs id regirested in the pairs exist in dataset")
+      bugs_id_dataset = sorted(bugs_id_dataset)
+      with open(os.path.join(self.DIR, 'bug_ids.txt'), 'w') as f:
+        for bug_id in bugs_id_dataset:
+          f.write("%d\n" % bug_id)
+      bugs_invalid = set(bugs_id) - set(bugs_id_dataset)
+      print("Bugs not present in dataset: ", list(bugs_invalid))
+      bug_pairs = []
+      with open(os.path.join(self.DIR, 'train.txt'), 'r') as f:
+          for line in f:
+              bug1, bug2 = line.strip().split()
+              if bug1 and bugs_invalid and bug2 not in bugs_invalid:
+                bug_pairs.append([bug1, bug2])
+      with open(os.path.join(self.DIR, 'train.txt'), 'w') as f:
+          for pairs in bug_pairs:
+              f.write("{} {}\n".format(pairs[0], pairs[1]))
+      
   def run(self):
     
       # create dataset directory
@@ -311,7 +324,7 @@ class Preprocess:
       if not os.path.exists(bug_dir):
           os.mkdir(bug_dir)
 
-      normalized = os.path.join('data/normalized', self.DATASET)
+      normalized = os.path.join('{}data/normalized'.format(self.COLAB), self.DATASET)
 
       self.DIR = bug_dir
       self.DOMAIN = os.path.join(normalized, self.DOMAIN)
@@ -327,11 +340,17 @@ class Preprocess:
       df_train_pair = pd.read_csv('{}.csv'.format(self.PAIRS))
 
       bug_pairs, bug_ids = self.read_pairs(df_train_pair)
+      bugs_id_dataset = df_train['issue_id'].values
       print("Number of bugs: {}".format(len(bug_ids)))
       print("Number of pairs: {}".format(len(bug_pairs)))
 
       # Split into train/test
       self.split_train_test(bug_pairs, self.VALIDATION_SPLIT)
+
+      # Debug
+      # test  = [14785, 24843, 32367, 33529]
+      # df_train = df_train[df_train['issue_id'].isin(test)]
+
       # Normalize the text
       text = self.normalized_data(bug_ids, df_train)
       # Build the vocab
@@ -341,18 +360,23 @@ class Preprocess:
       num_lines =  len(open(os.path.join(self.DIR, 'normalized_bugs.json'), 'r').read().splitlines()) * 2
       total = num_lines // 2
       bugs = self.dump_bugs(word_vocab, total)
-      self.processing_dump(bugs, word_vocab)
+      self.processing_dump(bugs, word_vocab, bug_ids, bugs_id_dataset)
       print("Saved!")
 
 def main():
 
     try:
-      _, dataset = sys.argv
+      _, dataset, colab = sys.argv
     except:
       print('###### Missing the dataset to be processed #########')
-      print("Ex: $ python script.py {eclipse, eclipse_small, netbeans, openoffice} ")
+      print("Ex: $ python preprocessing_baseline.py {eclipse, eclipse_small, netbeans, openoffice} colab")
       exit(1)
     
+    if colab == 'colab':
+      COLAB = 'drive/My Drive/Colab Notebooks/'
+    else:
+      COLAB = ''
+
     op = {
       'eclipse' : {
         'DATASET' : 'eclipse',
@@ -376,7 +400,7 @@ def main():
       }
     }
 
-    preprocessing = Preprocess(op[dataset]['DATASET'], op[dataset]['DOMAIN'], op[dataset]['PAIRS'])
+    preprocessing = Preprocess(op[dataset]['DATASET'], op[dataset]['DOMAIN'], op[dataset]['PAIRS'], COLAB)
     preprocessing.run()
 
 if __name__ == '__main__':
