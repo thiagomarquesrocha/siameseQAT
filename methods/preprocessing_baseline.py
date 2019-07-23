@@ -28,7 +28,7 @@ from os import path
 class Preprocess:
 
   ENTITY_ENUM = {
-    '': '',
+    '': 'unknown',
     'PERSON': 'person',
     'NORP': 'nationality',
     'FAC': 'facility',
@@ -62,7 +62,7 @@ class Preprocess:
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
     self.PAIRS = PAIRS
-    self.nlp = spacy.load('en_core_web_sm')
+    self.nlp = spacy.load('en_core_web_lg')
     self.bugs = {}
     self.bugs_saved = []
 
@@ -131,7 +131,7 @@ class Preprocess:
     #except:
     #  return 'description'
     text = [word.lower() for word in nltk.word_tokenize(text)]
-    text = ' '.join([word for word in text if len(word) > 1])
+    text = ' '.join([word for word in text])
     return text
 
   def save_dict(self, set, filename):
@@ -268,32 +268,32 @@ class Preprocess:
 
   def processing_dump(self, bugs, word_vocab, bugs_id, bugs_id_dataset):
       #clear_output()
-      #cpu = os.cpu_count() - 1
+      cpu = os.cpu_count() - 1
       #pool = Pool(processes=cpu) # start 4 worker processes
       bug_dir = os.path.join(self.DIR, 'bugs')
       #print("Starting the slice ...")
-      # works = []
-      # n = len(bugs) // cpu
-      # n = 1 if n == 0 else n
-      # sliced = []
-      # pos_end = n
-      # end = len(bugs)
-      # for i in range(cpu):
-      #     pos_end = end if pos_end>=end else pos_end
-      #     pos_end = end if (i+1) == cpu and pos_end < end else pos_end
-      #     sliced.append(bugs[i*n:pos_end])
-      #     pos_end += n
+      works = []
+      n = len(bugs) // cpu
+      n = 1 if n == 0 else n
+      sliced = []
+      pos_end = n
+      end = len(bugs)
+      for i in range(cpu):
+          pos_end = end if pos_end>=end else pos_end
+          pos_end = end if (i+1) == cpu and pos_end < end else pos_end
+          sliced.append(bugs[i*n:pos_end])
+          pos_end += n
 
-      # print("Slicing done!")
-      # for s in sliced:
-      #     if len(s) > 0:
-      #         works.append(pool.apply_async(self.dump_vocabulary, (s, word_vocab, bug_dir, )))
-      #         #dump_vocabulary(s, bug_dir)
+      print("Slicing done!")
+      for s in sliced:
+          if len(s) > 0:
+              works.append(pool.apply_async(self.dump_vocabulary, (s, word_vocab, bug_dir, )))
+              #dump_vocabulary(s, bug_dir)
 
-      # print("Executing the works...")
-      # res = [w.get() for w in works]
+      print("Executing the works...")
+      res = [w.get() for w in works]
 
-      self.dump_vocabulary(bugs, word_vocab, bug_dir)
+      #self.dump_vocabulary(bugs, word_vocab, bug_dir)
 
       self.validing_bugs_id(bugs_id, bugs_id_dataset)
 

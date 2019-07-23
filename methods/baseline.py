@@ -133,16 +133,6 @@ class Baseline:
         return loaded_model
 
     @staticmethod
-    def save_model(model, name, verbose=0):
-        m_dir = os.path.join('modelos')
-        if not os.path.exists(m_dir):
-            os.mkdir(m_dir)
-        export = os.path.join(m_dir, "model_{}.h5".format(name))
-        model.save(export)
-        if(verbose):
-            print("Saved model '{}' to disk".format(export))
-
-    @staticmethod
     def save_result(DIR, h, name):
         r_dir = os.path.join(DIR, 'resultados')
         if not os.path.exists(r_dir):
@@ -249,8 +239,8 @@ class Baseline:
                 removed.append(bug_id)
         
         # Padding
-        title_padding = Baseline.data_padding(title_padding, 100)
-        desc_padding = Baseline.data_padding(desc_padding, 500)
+        title_padding = self.data_padding(title_padding, 100)
+        desc_padding = self.data_padding(desc_padding, 500)
         
         for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
             self.bug_set[bug_id]['title_word'] = bug_title
@@ -258,7 +248,7 @@ class Baseline:
             bug = self.bug_set[bug_id]
             self.sentence_dict[",".join(bug_title.astype(str))] = bug['title']
             self.sentence_dict[",".join(bug_desc.astype(str))] = bug['description']
-    
+        
         if len(removed) > 0:
             for x in removed:
                 self.bug_ids.remove(x)
@@ -491,37 +481,37 @@ class Baseline:
         self.embedding_matrix = embedding_matrix
 
     ############################# CUSTOM LOSS #####################################
-    @staticmethod
-    def l2_normalize(x, axis):
-        norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=False))
-        return K.maximum(x, K.epsilon()), K.maximum(norm, K.epsilon())
+    # @staticmethod
+    # def l2_normalize(x, axis):
+    #     norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=False))
+    #     return K.maximum(x, K.epsilon()), K.maximum(norm, K.epsilon())
 
-    # https://github.com/keras-team/keras/issues/3031
-    # https://github.com/keras-team/keras/issues/8335
-    @staticmethod
-    def cosine_distance(inputs):
-        x, y = inputs
-        x, x_norm = l2_normalize(x, axis=-1)
-        y, y_norm = l2_normalize(y, axis=-1)
-        distance = K.sum( x * y, axis=-1) / (x_norm * y_norm)
-        distance = (distance + K.constant(1)) / K.constant(2)
-        # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
-        # positive (which is the case after ReLU activation).
-        return distance
-    @staticmethod
-    def margin_loss(y_true, y_pred):
-        margin = K.constant(1.0)
-        loss = K.maximum(0.0, margin - y_pred[0] +  y_pred[1])
-        return K.mean(loss)
-    @staticmethod
-    def pos_distance(y_true, y_pred):
-        return K.mean(y_pred[0])
-    @staticmethod
-    def neg_distance(y_true, y_pred):
-        return K.mean(y_pred[1])
-    @staticmethod
-    def stack_tensors(vects):
-        return K.stack(vects)
-        # return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
-        # better method is to use concatenate
-        # return K.concatenate(vects,axis=1)
+    # # https://github.com/keras-team/keras/issues/3031
+    # # https://github.com/keras-team/keras/issues/8335
+    # @staticmethod
+    # def cosine_distance(inputs):
+    #     x, y = inputs
+    #     x, x_norm = l2_normalize(x, axis=-1)
+    #     y, y_norm = l2_normalize(y, axis=-1)
+    #     distance = K.sum( x * y, axis=-1) / (x_norm * y_norm)
+    #     distance = (distance + K.constant(1)) / K.constant(2)
+    #     # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
+    #     # positive (which is the case after ReLU activation).
+    #     return distance
+    # @staticmethod
+    # def margin_loss(y_true, y_pred):
+    #     margin = K.constant(1.0)
+    #     loss = K.maximum(0.0, margin - y_pred[0] +  y_pred[1])
+    #     return K.mean(loss)
+    # @staticmethod
+    # def pos_distance(y_true, y_pred):
+    #     return K.mean(y_pred[0])
+    # @staticmethod
+    # def neg_distance(y_true, y_pred):
+    #     return K.mean(y_pred[1])
+    # @staticmethod
+    # def stack_tensors(vects):
+    #     return K.stack(vects)
+    #     # return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
+    #     # better method is to use concatenate
+    #     # return K.concatenate(vects,axis=1)

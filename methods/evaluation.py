@@ -4,20 +4,20 @@ import pprint
 class Evaluation():
     def __init__(self, verbose=1):
         self.verbose = verbose
+        self.MAX_RANK = 25
     
+    def verbose(self, verbose=1):
+        self.verbose = verbose
     """
         Rank recall_rate_@k
         rank = "query:master|master:id:sim,master:id:sim"
     """
-    def top_k_recall(self, rank, k):
-        query, rank = rank.split('|')
-        query_dup_id, query_master = query.split(":")
-        query_master = int(query_master)
-        rank_masters = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:25])]
-        corrects = len(set([query_master]) & set(rank_masters[:k]))
-        #total = len(retrieval.buckets[issues_by_buckets[query_master]])
-        total = 1
-        #total = 1 if corrects <= 0 else corrects
+    def top_k_recall(self, row, k):
+        query, rank = row.split('|')
+        query_dup_id, ground_truth = query.split(":")
+        candidates = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:self.MAX_RANK])]
+        corrects = len(set([int(ground_truth)]) & set(candidates[:k]))
+        total = len([ground_truth]) # only one master from query
         return float(corrects), total
 
     def evaluate(self, path):
@@ -36,11 +36,11 @@ class Evaluation():
                 self.recall(row)
         
         report = {
-            'recall_at_5' : round(self.recall_at_5_corrects_sum / self.recall_at_5_total_sum, 2),
-            'recall_at_10' : round(self.recall_at_10_corrects_sum / self.recall_at_10_total_sum, 2),
-            'recall_at_15' : round(self.recall_at_15_corrects_sum / self.recall_at_15_total_sum, 2),
-            'recall_at_20' : round(self.recall_at_20_corrects_sum / self.recall_at_20_total_sum, 2),
-            'recall_at_25' : round(self.recall_at_25_corrects_sum / self.recall_at_25_total_sum, 2)
+            '1 - recall_at_5' : round(self.recall_at_5_corrects_sum / self.recall_at_5_total_sum, 2),
+            '2 - recall_at_10' : round(self.recall_at_10_corrects_sum / self.recall_at_10_total_sum, 2),
+            '3 - recall_at_15' : round(self.recall_at_15_corrects_sum / self.recall_at_15_total_sum, 2),
+            '4 - recall_at_20' : round(self.recall_at_20_corrects_sum / self.recall_at_20_total_sum, 2),
+            '5 - recall_at_25' : round(self.recall_at_25_corrects_sum / self.recall_at_25_total_sum, 2)
         }
 
         return report

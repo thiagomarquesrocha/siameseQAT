@@ -8,7 +8,7 @@ nb_dir = os.path.split(os.getcwd())[0]
 if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
-from methods.baseline import Baseline
+# from methods.baseline import Baseline
 from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
         MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
 from keras.models import Model
@@ -55,19 +55,16 @@ class Retrieval():
         test = []
         with open(path_test, 'r') as file_test:
             for row in tqdm(file_test):
-                duplicates = np.array(row.split(' '), int)
-                # Create the test queries
-                query = duplicates[0]
-                duplicates = np.delete(duplicates, 0)
-                test.append([query, duplicates.tolist()])
+                tokens = row.strip().split()
+                test.append([int(tokens[0]), [int(bug) for bug in tokens[1:]]])
         self.test = test
 
-    def read_model(self, name, MAX_SEQUENCE_INFO, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    # def read_model(self, name, MAX_SEQUENCE_INFO, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
         
-        # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
-        similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
+    #     # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
+    #     similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
         
-        self.model = similarity_model
+    #     self.model = similarity_model
 
     def read_train(self, path_data):
         self.train = []
@@ -139,42 +136,42 @@ class Retrieval():
             index += 2
 
     def run(self, path, dataset, path_buckets, path_train, path_test):
+        pass
+        # MAX_SEQUENCE_LENGTH_T = 100 # Title
+        # MAX_SEQUENCE_LENGTH_D = 100 # Description
 
-        MAX_SEQUENCE_LENGTH_T = 100 # Title
-        MAX_SEQUENCE_LENGTH_D = 100 # Description
+        # # Create the instance from baseline
+        # self.baseline = Baseline(path, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
 
-        # Create the instance from baseline
-        self.baseline = Baseline(path, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
+        # df = pd.read_csv(path_buckets)
 
-        df = pd.read_csv(path_buckets)
-
-        # Load bug ids
-        self.load_bugs(path, path_train)
-        # Create the buckets
-        self.create_bucket(df)
-        # Read and create the test queries duplicate
-        self.create_queries(path_test)
-        # Read the siamese model
-        self.read_model(MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
+        # # Load bug ids
+        # self.load_bugs(path, path_train)
+        # # Create the buckets
+        # self.create_bucket(df)
+        # # Read and create the test queries duplicate
+        # self.create_queries(path_test)
+        # # Read the siamese model
+        # self.read_model(MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D)
         
-        self.train_vectorized, self.test_vectorized = [], []
-        self.bug_set_cluster_train, self.bug_set_cluster_test = [], []
-        self.read_train(path_train)
-        # Infer vector to all train
-        self.create_bug_clusters(self.bug_set_cluster_train, self.train)
-        self.infer_vector(self.train, self.train_vectorized)
-        # Infer vector to all test
-        self.create_bug_clusters(self.bug_set_cluster_test, self.test)
-        self.infer_vector(self.test, self.test_vectorized)
-        # Indexing all train in KNN method
-        X = np.array(self.train_vectorized)
-        nbrs = NearestNeighbors(n_neighbors=20, algorithm='ball_tree').fit(X)
-        # Next we find k nearest neighbor for each point in object X.
-        distances, indices = nbrs.kneighbors(X)
-        # Recommend neighborhood instances from test sample
-        X_test = self.test_vectorized
-        distances_test, indices_test = nbrs.kneighbors(X_test)
-        # Generating the rank result
+        # self.train_vectorized, self.test_vectorized = [], []
+        # self.bug_set_cluster_train, self.bug_set_cluster_test = [], []
+        # self.read_train(path_train)
+        # # Infer vector to all train
+        # self.create_bug_clusters(self.bug_set_cluster_train, self.train)
+        # self.infer_vector(self.train, self.train_vectorized)
+        # # Infer vector to all test
+        # self.create_bug_clusters(self.bug_set_cluster_test, self.test)
+        # self.infer_vector(self.test, self.test_vectorized)
+        # # Indexing all train in KNN method
+        # X = np.array(self.train_vectorized)
+        # nbrs = NearestNeighbors(n_neighbors=20, algorithm='ball_tree').fit(X)
+        # # Next we find k nearest neighbor for each point in object X.
+        # distances, indices = nbrs.kneighbors(X)
+        # # Recommend neighborhood instances from test sample
+        # X_test = self.test_vectorized
+        # distances_test, indices_test = nbrs.kneighbors(X_test)
+        # # Generating the rank result
 
 if __name__ == '__main__':
     retrieval = Retrieval()
