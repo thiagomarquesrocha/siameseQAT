@@ -131,7 +131,7 @@ class Preprocess:
     #except:
     #  return 'description'
     text = [word.lower() for word in nltk.word_tokenize(text)]
-    text = ' '.join([word for word in text])
+    text = ' '.join([word for word in text]).encode('utf-8')
     return text
 
   def save_dict(self, set, filename):
@@ -156,8 +156,17 @@ class Preprocess:
     components = set()
     bug_statuses = set()
     text = []
-    normalized_bugs = open(os.path.join(self.DIR, 'normalized_bugs.json'), 'w')
     print("Total:", df.shape[0])
+    normalized_bugs_json = []
+    self.paralelize_processing(df, self.processing_normalized_data, (products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json,  ))
+    print("Total of normalized: ", len(normalized_bugs_json))
+    print("Writing the normalized_bugs.json")
+    with open(os.path.join(self.DIR, 'normalized_bugs.json'), 'w') as f:
+      for row in tqdm(normalized_bugs_json):
+        f.write(row)
+    
+
+  def processing_normalized_data(self, df, products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json):
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
           bug = row[1]
@@ -173,7 +182,7 @@ class Preprocess:
           else:
               bug['title'] = ''
 
-          normalized_bugs.write('{}\n'.format(bug.to_json()))
+          normalized_bugs_json.append('{}\n'.format(bug.to_json()))
 
           text.append(bug['description'])
           text.append(bug['title'])
@@ -184,7 +193,6 @@ class Preprocess:
     self.save_dict(versions, os.path.join(self.DIR, 'version.dic'))
     self.save_dict(components, os.path.join(self.DIR, 'component.dic'))
     self.save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
-    return text
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
     word_freq = self.build_freq_dict(train_text)
@@ -266,12 +274,9 @@ class Preprocess:
               pickle.dump(bug, f)
           self.bugs_saved.append(bug['issue_id'])
 
-  def processing_dump(self, bugs, word_vocab, bugs_id, bugs_id_dataset):
-      #clear_output()
+  def paralelize_processing(self, bugs, callback, parameters):
       cpu = os.cpu_count() - 1
-      #pool = Pool(processes=cpu) # start 4 worker processes
-      bug_dir = os.path.join(self.DIR, 'bugs')
-      #print("Starting the slice ...")
+      pool = Pool(processes=cpu) # start N worker processes
       works = []
       n = len(bugs) // cpu
       n = 1 if n == 0 else n
@@ -284,15 +289,23 @@ class Preprocess:
           sliced.append(bugs[i*n:pos_end])
           pos_end += n
 
-      print("Slicing done!")
+      print("Slicing in {} workers".format(len(sliced)))
       for s in sliced:
           if len(s) > 0:
-              works.append(pool.apply_async(self.dump_vocabulary, (s, word_vocab, bug_dir, )))
+              config = list(parameters)
+              config.insert(0, s)
+              config = tuple(config)
+              works.append(pool.apply_async(callback, config))
               #dump_vocabulary(s, bug_dir)
 
       print("Executing the works...")
       res = [w.get() for w in works]
+      return res
 
+  def processing_dump(self, bugs, word_vocab, bugs_id, bugs_id_dataset):
+      #clear_output()
+      bug_dir = os.path.join(self.DIR, 'bugs')
+      self.paralelize_processing(bugs, self.dump_vocabulary, (word_vocab, bug_dir, ))
       #self.dump_vocabulary(bugs, word_vocab, bug_dir)
 
       self.validing_bugs_id(bugs_id, bugs_id_dataset)
