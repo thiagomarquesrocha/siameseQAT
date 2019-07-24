@@ -158,7 +158,7 @@ class Preprocess:
     text = []
     normalized_bugs_json = []
     print("Total:", df.shape[0])
-    res = self.paralelize_processing(df, self.processing_normalized_data, (self.normalize_text, ))
+    res = self.paralelize_processing(df[:2], self.processing_normalized_data, (self.normalize_text, ))
     for result in res:
       products = products.union(result[0])
       bug_severities = bug_severities.union(result[1])
@@ -353,7 +353,7 @@ class Preprocess:
       with open(os.path.join(self.DIR, 'train.txt'), 'r') as f:
           for line in f:
               bug1, bug2 = line.strip().split()
-              if bug1 and bugs_invalid and bug2 not in bugs_invalid:
+              if bug1 not in bugs_invalid and bug2 not in bugs_invalid:
                 bug_pairs.append([bug1, bug2])
       with open(os.path.join(self.DIR, 'train.txt'), 'w') as f:
           for pairs in bug_pairs:
