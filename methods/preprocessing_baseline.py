@@ -156,17 +156,41 @@ class Preprocess:
     components = set()
     bug_statuses = set()
     text = []
-    print("Total:", df.shape[0])
     normalized_bugs_json = []
-    self.paralelize_processing(df, self.processing_normalized_data, (products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json,  ))
+    print("Total:", df.shape[0])
+    res = self.paralelize_processing(df, self.processing_normalized_data, (self.normalize_text, ))
+    for result in res:
+      products = products.union(result[0])
+      bug_severities = bug_severities.union(result[1])
+      priorities = priorities.union(result[2])
+      versions = versions.union(result[3])
+      components = components.union(result[4])
+      bug_statuses = bug_statuses.union(result[5])
+      text += result[6]
+      normalized_bugs_json += result[7]
     print("Total of normalized: ", len(normalized_bugs_json))
     print("Writing the normalized_bugs.json")
     with open(os.path.join(self.DIR, 'normalized_bugs.json'), 'w') as f:
       for row in tqdm(normalized_bugs_json):
         f.write(row)
     
+    self.save_dict(products, os.path.join(self.DIR, 'product.dic'))
+    self.save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
+    self.save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
+    self.save_dict(versions, os.path.join(self.DIR, 'version.dic'))
+    self.save_dict(components, os.path.join(self.DIR, 'component.dic'))
+    self.save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
+    return text
 
-  def processing_normalized_data(self, df, products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json):
+  def processing_normalized_data(self, df, normalize_text):
+    products = set()
+    bug_severities = set()
+    priorities = set()
+    versions = set()
+    components = set()
+    bug_statuses = set()
+    text = []
+    normalized_bugs_json = []
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
           bug = row[1]
@@ -176,9 +200,9 @@ class Preprocess:
           versions.add(bug['version'])
           components.add(bug['component'])
           bug_statuses.add(bug['bug_status'])
-          bug['description'] = self.normalize_text(bug['description'])
+          bug['description'] = normalize_text(bug['description'])
           if 'title' in bug:
-              bug['title'] = self.normalize_text(bug['title'])
+              bug['title'] = normalize_text(bug['title'])
           else:
               bug['title'] = ''
 
@@ -187,12 +211,7 @@ class Preprocess:
           text.append(bug['description'])
           text.append(bug['title'])
           loop.update(1)
-    self.save_dict(products, os.path.join(self.DIR, 'product.dic'))
-    self.save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
-    self.save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
-    self.save_dict(versions, os.path.join(self.DIR, 'version.dic'))
-    self.save_dict(components, os.path.join(self.DIR, 'component.dic'))
-    self.save_dict(bug_statuses, os.path.join(self.DIR, 'bug_status.dic'))
+    return [products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json]
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
     word_freq = self.build_freq_dict(train_text)
@@ -259,20 +278,24 @@ class Preprocess:
       cont=0
       total = len(bugs)
       print("Starting the dump ...")
+      bugs_set = {}
+      bugs_saved = []
       for bug in tqdm(bugs):
           #bug = json.loads(line)
           #print(bug)
           cont+=1
-          bug['description_word'] = [word_vocab.get(w, UNK) for w in bug['description'].split()]
+          bug['description_word'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['description'].split()]
           if len(bug['title']) == 0:
               bug['title'] = bug['description'][:10]
-          bug['title_word'] = [word_vocab.get(w, UNK) for w in bug['title'].split()]
+          bug['title_word'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['title'].split()]
           #bug.pop('description')
           #bug.pop('title')
-          self.bugs[bug['issue_id']] = bug
+          bugs_set[bug['issue_id']] = bug
           with open(os.path.join(bug_dir, str(bug['issue_id']) + '.pkl'), 'wb') as f:
               pickle.dump(bug, f)
-          self.bugs_saved.append(bug['issue_id'])
+          bugs_saved.append(bug['issue_id'])
+
+      return [bugs_set, bugs_saved]
 
   def paralelize_processing(self, bugs, callback, parameters):
       cpu = os.cpu_count() - 1
@@ -305,7 +328,13 @@ class Preprocess:
   def processing_dump(self, bugs, word_vocab, bugs_id, bugs_id_dataset):
       #clear_output()
       bug_dir = os.path.join(self.DIR, 'bugs')
-      self.paralelize_processing(bugs, self.dump_vocabulary, (word_vocab, bug_dir, ))
+      res = self.paralelize_processing(bugs, self.dump_vocabulary, (word_vocab, bug_dir, ))
+      for result in res:
+        bugs_set = result[0]
+        bugs_saved = result[1]
+        for bug in bugs_set:
+          self.bugs[bug] = bugs_set[bug]
+        self.bugs_saved += bugs_saved
       #self.dump_vocabulary(bugs, word_vocab, bug_dir)
 
       self.validing_bugs_id(bugs_id, bugs_id_dataset)
