@@ -158,7 +158,7 @@ class Preprocess:
     text = []
     normalized_bugs_json = []
     print("Total:", df.shape[0])
-    res = self.paralelize_processing(df[:2], self.processing_normalized_data, (self.normalize_text, ))
+    res = self.paralelize_processing(df, self.processing_normalized_data, (self.normalize_text, ))
     for result in res:
       products = products.union(result[0])
       bug_severities = bug_severities.union(result[1])
@@ -343,11 +343,12 @@ class Preprocess:
 
   def validing_bugs_id(self, bugs_id, bugs_id_dataset):
       print("Check if all bugs id regirested in the pairs exist in dataset")
+      bugs_invalid = set(bugs_id) - set(bugs_id_dataset)
+      bugs_id_dataset = set(bugs_id_dataset) - bugs_invalid
       bugs_id_dataset = sorted(bugs_id_dataset)
       with open(os.path.join(self.DIR, 'bug_ids.txt'), 'w') as f:
         for bug_id in bugs_id_dataset:
           f.write("%d\n" % bug_id)
-      bugs_invalid = set(bugs_id) - set(bugs_id_dataset)
       print("Bugs not present in dataset: ", list(bugs_invalid))
       bug_pairs = []
       with open(os.path.join(self.DIR, 'train.txt'), 'r') as f:

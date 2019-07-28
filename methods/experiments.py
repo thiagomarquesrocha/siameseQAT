@@ -19,16 +19,18 @@ class Experiment:
     def load_bugs(self):
         self.baseline.load_bugs()
 
-    def prepare_dataset(self):
-        self.baseline.prepare_dataset()
+    def prepare_dataset(self, issues_by_buckets):
+        self.baseline.prepare_dataset(issues_by_buckets)
 
-    def retrieval(self, retrieval, baseline, number_of_columns_info, DOMAIN):
-        
-        self.MAX_SEQUENCE_LENGTH_I = number_of_columns_info # Status, Severity, Version, Component, Module
+    def set_retrieval(self, retrieval, baseline, DOMAIN):
+        # Link references
+        self.retrieval = retrieval
+        retrieval.baseline = baseline
+
+        # self.baseline.MAX_SEQUENCE_LENGTH_I = number_of_columns_info # Status, Severity, Version, Component, Module
 
         # Create the instance from baseline
         path_buckets = 'data/normalized/{}/{}.csv'.format(DOMAIN, DOMAIN)
-        retrieval.baseline = baseline
 
         df = pd.read_csv(path_buckets)
 
@@ -36,25 +38,13 @@ class Experiment:
         #retrieval.load_bugs(path, path_train)
         # Create the buckets
         retrieval.create_bucket(df)
-
-        self.retrieval = retrieval
     
-    def create_queries(self, path_test):
-        print("Creating the queries...")
-        test = []
-        with open(path_test, 'r') as file_test:
-            for row in tqdm(file_test):
-                tokens = row.strip().split()
-                test.append([int(tokens[0]), [int(bug) for bug in tokens[1:]]])
-        self.retrieval.test = test
+    def create_queries(self):
+        print("Reading queries from baseline.")
+        self.retrieval.create_queries()
 
     def get_buckets_for_bugs(self):
-        issues_by_buckets = {}
-        for bucket in tqdm(self.retrieval.buckets):
-            issues_by_buckets[bucket] = bucket
-            for issue in np.array(self.retrieval.buckets[bucket]).tolist():
-                issues_by_buckets[issue] = bucket
-        return issues_by_buckets
+        return self.retrieval.get_buckets_for_bugs()
     
     ## Vectorizer model
     def get_model_vectorizer(self, path=None, loaded_model=None):
@@ -247,7 +237,7 @@ class Experiment:
         return recall, exported_rank
         #return report['5 - recall_at_25'], evaluation_test_batch[0], evaluation_test_batch[1], evaluation_test_batch[2]
 
-    def evaluation(self, evaluation):
+    def set_evaluation(self, evaluation):
         self.evaluation = evaluation
 
     def save_model(self, model, name, verbose=0):

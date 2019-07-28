@@ -44,34 +44,29 @@ class Retrieval():
             dup_id = row_bug_id
             while bucket_name not in buckets:
                 query = df_duplicates[df_duplicates['bug_id'] == bucket_name]
+                if query.shape[0] <= 0: 
+                    break
                 bucket_name = int(query['dup_id'])
-            buckets[bucket_name].add(dup_id)
+            '''
+                Some bugs duplicates point to one master that
+                does not exist in the dataset like openoffice master=152778
+            '''
+            if bucket_name in buckets:
+                buckets[bucket_name].add(dup_id)
             loop.update(1)
         loop.close()
         self.buckets = buckets
 
-    def create_queries(self, path_test):
-        print("Creating the queries...")
-        test = []
-        with open(path_test, 'r') as file_test:
-            for row in tqdm(file_test):
-                tokens = row.strip().split()
-                test.append([int(tokens[0]), [int(bug) for bug in tokens[1:]]])
-        self.test = test
+    def create_queries(self):
+        self.test = self.baseline.test_data
 
-    # def read_model(self, name, MAX_SEQUENCE_INFO, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
-        
-    #     # name = 'baseline_10000epoch_10steps_512batch(eclipse)'
-    #     similarity_model = Baseline.load_model('', name, {'l2_normalize' : Baseline.l2_normalize})
-        
-    #     self.model = similarity_model
-
-    def read_train(self, path_data):
-        self.train = []
-        with open(path_data, 'r') as file_train:
-            for row in file_train:
-                dup_a_id, dup_b_id = np.array(row.split(' '), int)
-                self.train.append([dup_a_id, dup_b_id])
+    def get_buckets_for_bugs(self):
+        issues_by_buckets = {}
+        for bucket in tqdm(self.buckets):
+            issues_by_buckets[bucket] = bucket
+            for issue in np.array(self.buckets[bucket]).tolist():
+                issues_by_buckets[issue] = bucket
+        return issues_by_buckets
 
     def infer_vector_train(self, bugs):
         bug_set = self.baseline.get_bug_set()
@@ -125,15 +120,6 @@ class Retrieval():
             self.baseline.to_one_hot(bug['version'], self.baseline.info_dict['version']))
         )
         return info
-
-    def create_bug_clusters(self, bug_set_cluster, bugs):
-        index = 0
-        for row in tqdm(bugs):
-            dup_a_id, dup_b_id = row
-            # if dup_a_id not in bug_set or dup_b_id not in bug_set: continue
-            bug_set_cluster[indices[index][:1][0]] = dup_a_id
-            bug_set_cluster[indices[index+1][:1][0]] = dup_b_id
-            index += 2
 
     def run(self, path, dataset, path_buckets, path_train, path_test):
         pass

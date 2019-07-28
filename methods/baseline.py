@@ -239,8 +239,8 @@ class Baseline:
                 removed.append(bug_id)
         
         # Padding
-        title_padding = self.data_padding(title_padding, 100)
-        desc_padding = self.data_padding(desc_padding, 500)
+        title_padding = self.data_padding(title_padding, self.MAX_SEQUENCE_LENGTH_T)
+        desc_padding = self.data_padding(desc_padding, self.MAX_SEQUENCE_LENGTH_D)
         
         for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
             self.bug_set[bug_id]['title_word'] = bug_title
@@ -263,29 +263,43 @@ class Baseline:
         return neg_bug
 
     @staticmethod
-    def read_test_data(data):
+    def read_test_data(data, bug_set, issues_by_buckets):
         test_data = []
         bug_ids = set()
+        bug_set = np.asarray(bug_set, int)
         with open(os.path.join(data, 'test.txt'), 'r') as f:
             for line in f:
-                tokens = line.strip().split()
-                test_data.append([int(tokens[0]), [int(bug) for bug in tokens[1:]]])
-                for token in tokens:
-                    bug_ids.add(int(token))
+                bugs = np.asarray(line.strip().split(), int)
+                tokens = [bug for bug in bugs if bug in bug_set and bug in issues_by_buckets]
+                if len(tokens) < 2: 
+                    continue
+                query = tokens[0]
+                dups = tokens[1:]
+                test_data.append([query, dups])
+                for bug_id in tokens:
+                    bug_ids.add(bug_id)
         return test_data, list(bug_ids)
 
     @staticmethod
-    def read_train_data(data):
+    def read_train_data(data, bug_set):
         data_pairs = []
         data_dup_sets = {}
         print('Reading train data')
         with open(os.path.join(data, 'train.txt'), 'r') as f:
             for line in f:
                 bug1, bug2 = line.strip().split()
-                data_pairs.append([int(bug1), int(bug2)])
-                if int(bug1) not in data_dup_sets.keys():
-                    data_dup_sets[int(bug1)] = set()
-                data_dup_sets[int(bug1)].add(int(bug2))
+                bug1 = int(bug1)
+                bug2 = int(bug2)
+                '''
+                    Some bugs duplicates point to one master that
+                    does not exist in the dataset like openoffice master=152778
+                '''
+                if bug1 not in bug_set or bug2 not in bug_set: 
+                    continue
+                data_pairs.append([bug1, bug2])
+                if bug1 not in data_dup_sets.keys():
+                    data_dup_sets[bug1] = set()
+                data_dup_sets[bug1].add(bug2)
         return data_pairs, data_dup_sets
 
     @staticmethod
@@ -298,24 +312,15 @@ class Baseline:
         return bug_ids
 
     # data - path
-    def prepare_dataset(self):
+    def prepare_dataset(self, issues_by_buckets):
+        if not self.bug_set or len(self.bug_set) == 0:
+            raise Exception('self.bug_set not initialized')
         # global train_data
         # global dup_sets
         # global bug_ids
-        if not self.train_data:
-            self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR)
-        if not self.test_data:
-            self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR)
-            #print(len(train_data))
-        if not self.bug_ids:
-            self.bug_ids = Baseline.read_bug_ids(self.DIR)
-
-    def siam_gen(self, data, dup_set, batch_size, n_neg):
-        while True:
-            input_sample, input_pos, input_neg, sim = self.batch_iterator(data, dup_set, batch_size, n_neg)
-            yield ({ 'title_in' : input_sample['title'], 'title_pos': input_pos['title'], 'title_neg' : input_neg['title'],
-            'desc_in' : input_sample['description'], 'desc_pos' : input_pos['description'], 'desc_neg' : input_neg['description'],
-            'info_in' : input_sample['info'], 'info_pos' : input_pos['info'], 'info_neg' : input_neg['info'] }, sim)
+        self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set))
+        self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets)
+        self.bug_ids = Baseline.read_bug_ids(self.DIR)
 
     def to_one_hot(self, idx, size):
         one_hot = np.zeros(size)
@@ -479,39 +484,3 @@ class Baseline:
                 oov_count += 1
         print('Number of OOV words: %d' % oov_count)
         self.embedding_matrix = embedding_matrix
-
-    ############################# CUSTOM LOSS #####################################
-    # @staticmethod
-    # def l2_normalize(x, axis):
-    #     norm = K.sqrt(K.sum(K.square(x), axis=axis, keepdims=False))
-    #     return K.maximum(x, K.epsilon()), K.maximum(norm, K.epsilon())
-
-    # # https://github.com/keras-team/keras/issues/3031
-    # # https://github.com/keras-team/keras/issues/8335
-    # @staticmethod
-    # def cosine_distance(inputs):
-    #     x, y = inputs
-    #     x, x_norm = l2_normalize(x, axis=-1)
-    #     y, y_norm = l2_normalize(y, axis=-1)
-    #     distance = K.sum( x * y, axis=-1) / (x_norm * y_norm)
-    #     distance = (distance + K.constant(1)) / K.constant(2)
-    #     # Distance goes from 0 to 2 in theory, but from 0 to 1 if x and y are both
-    #     # positive (which is the case after ReLU activation).
-    #     return distance
-    # @staticmethod
-    # def margin_loss(y_true, y_pred):
-    #     margin = K.constant(1.0)
-    #     loss = K.maximum(0.0, margin - y_pred[0] +  y_pred[1])
-    #     return K.mean(loss)
-    # @staticmethod
-    # def pos_distance(y_true, y_pred):
-    #     return K.mean(y_pred[0])
-    # @staticmethod
-    # def neg_distance(y_true, y_pred):
-    #     return K.mean(y_pred[1])
-    # @staticmethod
-    # def stack_tensors(vects):
-    #     return K.stack(vects)
-    #     # return K.squeeze(K.stack(vects),axis=1) # stack adds a new dim. So squeeze it
-    #     # better method is to use concatenate
-    #     # return K.concatenate(vects,axis=1)
