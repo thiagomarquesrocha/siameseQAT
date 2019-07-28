@@ -129,6 +129,9 @@ class Experiment:
                 title_data.append(bug['title_word'])
                 desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
+            elif method == 'dwen':
+                title_data.append(bug['title_word'])
+                desc_data.append(bug['description_word'])
             elif method == 'fasttext' or method == 'doc2vec':
                 title_desc_data.append(bug['title'] + ' ' + bug['description'])
             test_vectorized.append({ 'bug_id' : bucket_id })
@@ -137,6 +140,8 @@ class Experiment:
         # Get embedding of all buckets
         if method == 'keras':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
+        elif method == 'dwen':
+            embed_test = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
             embed_test = [ model.get_sentence_vector(row) for row in title_desc_data ]
         elif method == 'doc2vec':
@@ -172,6 +177,9 @@ class Experiment:
                     title_data.append(bug['title_word'])
                     desc_data.append(bug['description_word'])
                     info_data.append(self.retrieval.get_info(bug))
+                elif method == 'dwen':
+                    title_data.append(bug['title_word'])
+                    desc_data.append(bug['description_word'])
                 elif method == 'fasttext' or method == 'doc2vec':
                     title_desc_data.append(bug['title'] + ' ' + bug['description'])
                 
@@ -180,6 +188,8 @@ class Experiment:
         # Get embedding of all buckets
         if method == 'keras':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
+        elif method == 'dwen':
+            embed_queries = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
             embed_queries = [ model.get_sentence_vector(text) for text in title_desc_data ]
         elif method == 'doc2vec':
