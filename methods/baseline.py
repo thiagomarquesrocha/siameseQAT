@@ -331,7 +331,7 @@ class Baseline:
     def data_padding(data, max_seq_length):
         seq_lengths = [len(seq) for seq in data]
         seq_lengths.append(6)
-        max_seq_length = min(max(seq_lengths), max_seq_length)
+        #max_seq_length = min(max(seq_lengths), max_seq_length)
         padded_data = np.zeros(shape=[len(data), max_seq_length])
         for i, seq in enumerate(data):
             seq = seq[:max_seq_length]
