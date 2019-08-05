@@ -258,16 +258,21 @@ class Baseline:
     @staticmethod
     def get_neg_bug(invalid_bugs, bug_ids):
         neg_bug = random.choice(bug_ids)
-        while neg_bug in invalid_bugs:
-            neg_bug = random.choice(bug_ids)
+        try:
+            while neg_bug in invalid_bugs:
+                neg_bug = random.choice(bug_ids)
+        except:
+            invalid_bugs = [invalid_bugs]
+            while neg_bug in invalid_bugs:
+                neg_bug = random.choice(bug_ids)
         return neg_bug
 
     @staticmethod
-    def read_test_data(data, bug_set, issues_by_buckets):
+    def read_test_data(data, bug_set, issues_by_buckets, path_test):
         test_data = []
         bug_ids = set()
         bug_set = np.asarray(bug_set, int)
-        with open(os.path.join(data, 'test.txt'), 'r') as f:
+        with open(os.path.join(data, '{}.txt'.format(path_test)), 'r') as f:
             for line in f:
                 bugs = np.asarray(line.strip().split(), int)
                 tokens = [bug for bug in bugs if bug in bug_set and bug in issues_by_buckets]
@@ -281,11 +286,11 @@ class Baseline:
         return test_data, list(bug_ids)
 
     @staticmethod
-    def read_train_data(data, bug_set):
+    def read_train_data(data, bug_set, path_train):
         data_pairs = []
         data_dup_sets = {}
         print('Reading train data')
-        with open(os.path.join(data, 'train.txt'), 'r') as f:
+        with open(os.path.join(data, '{}.txt'.format(path_train)), 'r') as f:
             for line in f:
                 bug1, bug2 = line.strip().split()
                 bug1 = int(bug1)
@@ -312,14 +317,14 @@ class Baseline:
         return bug_ids
 
     # data - path
-    def prepare_dataset(self, issues_by_buckets):
+    def prepare_dataset(self, issues_by_buckets, path_train='train', path_test='test'):
         if not self.bug_set or len(self.bug_set) == 0:
             raise Exception('self.bug_set not initialized')
         # global train_data
         # global dup_sets
         # global bug_ids
-        self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set))
-        self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets)
+        self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set), path_train)
+        self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets, path_test)
         self.bug_ids = Baseline.read_bug_ids(self.DIR)
 
     def to_one_hot(self, idx, size):
@@ -356,7 +361,7 @@ class Baseline:
     # data - path
     # batch_size - 128
     # n_neg - 1
-    def batch_iterator(self, data, dup_sets, batch_size, n_neg):
+    def batch_iterator(self, data, dup_sets, bug_ids, batch_size, n_neg):
         # global train_data
         # global self.dup_sets
         # global self.bug_ids
@@ -373,7 +378,7 @@ class Baseline:
         batch_triplets = []
         
         for offset in range(batch_size):
-            neg_bug = Baseline.get_neg_bug(dup_sets[data[offset][0]], self.bug_ids)
+            neg_bug = Baseline.get_neg_bug(dup_sets[data[offset][0]], bug_ids)
             anchor, pos, neg = data[offset][0], data[offset][1], neg_bug
             bug_anchor = self.bug_set[anchor]
             bug_pos = self.bug_set[pos]
@@ -412,8 +417,8 @@ class Baseline:
     def get_bug_set(self):
         return self.bug_set
 
-    def display_batch(self, data, dup_set, nb):
-        _, input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, nb, 1)
+    def display_batch(self, data, dup_set, bug_ids, nb):
+        _, input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, bug_ids, nb, 1)
 
         t_a, t_b, d_a, d_b = [], [], [], []
         

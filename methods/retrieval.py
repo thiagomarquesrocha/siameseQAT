@@ -44,7 +44,12 @@ class Retrieval():
             dup_id = row_bug_id
             while bucket_name not in buckets:
                 query = df_duplicates[df_duplicates['bug_id'] == bucket_name]
-                if query.shape[0] <= 0: 
+                '''
+                Ex: Netbeans bug 97781 point to 67568 (does not exist)
+                '''
+                if query.shape[0] <= 0: # when the duplicate does not exist
+                    buckets[bucket_name] = set() # set the bucket alone
+                    buckets[bucket_name].add(bucket_name)
                     break
                 bucket_name = int(query['dup_id'])
             '''

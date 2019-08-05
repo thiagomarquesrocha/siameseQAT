@@ -15,9 +15,12 @@ class Evaluation():
     def top_k_recall(self, row, k):
         query, rank = row.split('|')
         query_dup_id, ground_truth = query.split(":")
+        ground_truth = np.asarray(ground_truth.split(','), int)
         candidates = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:self.MAX_RANK])]
-        corrects = len(set([int(ground_truth)]) & set(candidates[:k]))
-        total = len([ground_truth]) # only one master from query
+        corrects = len(set(ground_truth) & set(candidates[:k]))
+        corrects = 1 if corrects > 0 else 0
+        #total = len(ground_truth) # only one master from query
+        total = 1
         return float(corrects), total
 
     def evaluate(self, path):
