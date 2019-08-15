@@ -24,6 +24,36 @@ import sys
 import spacy
 import os.path
 from os import path
+from spacy.matcher import PhraseMatcher
+from spacy.tokens import Span
+# Solution from https://github.com/explosion/spaCy/issues/3608
+class EntityMatcher(object):
+    #name = "entity_matcher"
+
+    def __init__(self, name, nlp, terms, label):
+        self.name = name
+        patterns = [nlp.make_doc(text) for text in terms]
+        self.matcher = PhraseMatcher(nlp.vocab)
+        self.matcher.add(label, None, *patterns)
+
+    def __call__(self, doc):
+        matches = self.matcher(doc)
+        seen_tokens = set()
+        new_entities = []
+        entities = doc.ents
+        for match_id, start, end in matches:
+        #    span = Span(doc, start, end, label=match_id)
+        #    doc.ents = list(doc.ents) + [span]
+            # check for end - 1 here because boundaries are inclusive
+            if start not in seen_tokens and end - 1 not in seen_tokens:
+                new_entities.append(Span(doc, start, end, label=match_id))
+                entities = [
+                    e for e in entities if not (e.start < end and e.end > start)
+                ]
+                seen_tokens.update(range(start, end))
+
+        doc.ents = tuple(entities) + tuple(new_entities)
+        return doc
 
 class Preprocess:
 
@@ -65,24 +95,26 @@ class Preprocess:
     self.nlp = spacy.load('en_core_web_lg')
     self.bugs = {}
     self.bugs_saved = []
+    self.TRAIN_PATH = 'train_chronological'
+    self.TEST_PATH = 'test_chronological'
+
+    self.improve_ner(self.nlp)
 
   def read_pairs(self, df):
     bug_pairs = []
+    bucket_dups = []
     bug_ids = set()
-    for row in df.iterrows():
-      duplicates = row[1]['duplicate']
-      bug1 = row[1]['issue_id']
-      duplicates = [] if (type(duplicates) == float) else np.array(duplicates.split(';'), dtype=np.float)
-      if len(duplicates) == 0: # No duplicate
-        bug_ids.add(int(bug1))
-      else: # duplicate
-        bug_ids.add(int(bug1))
-        for bug2 in duplicates:
-          bug_pairs.append((int(bug1), int(bug2)))
-          bug_ids.add(int(bug2))
+    buckets = self.create_bucket(df)
+    # buckets
+    for key in buckets:
+      if len(buckets[key]) > 1:
+          bucket_dups.append([key, list(buckets[key])])
+
+    bug_pairs, bug_ids = self.getting_pairs(bucket_dups)
+
     with open(os.path.join(self.DIR, 'bug_pairs.txt'), 'w') as f:
       for pair in bug_pairs:
-        f.write("%d %d\n" % pair)
+        f.write("{} {}\n".format(pair[0], pair[1]))
     bug_ids = sorted(bug_ids)
     with open(os.path.join(self.DIR, 'bug_ids.txt'), 'w') as f:
       for bug_id in bug_ids:
@@ -90,11 +122,11 @@ class Preprocess:
     return bug_pairs, bug_ids
 
   def split_train_test(self, bug_pairs, VALIDATION_SPLIT):
-    random.shuffle(bug_pairs)
+    #random.shuffle(bug_pairs)
     split_idx = int(len(bug_pairs) * VALIDATION_SPLIT)
-    with open(os.path.join(self.DIR, 'train.txt'), 'w') as f:
+    with open(os.path.join(self.DIR, '{}.txt'.format(self.TRAIN_PATH)), 'w') as f:
       for pair in bug_pairs[:split_idx]:
-        f.write("%d %d\n" % pair)
+        f.write("{} {}\n".format(pair[0], pair[1]))
     test_data = {}
     for pair in bug_pairs[split_idx:]:
       bug1 = int(pair[0])
@@ -102,7 +134,7 @@ class Preprocess:
       if bug1 not in test_data:
         test_data[bug1] = set()
       test_data[bug1].add(bug2)
-    with open(os.path.join(self.DIR, 'test.txt'), 'w') as f:
+    with open(os.path.join(self.DIR, '{}.txt'.format(self.TEST_PATH)), 'w') as f:
       for bug in test_data.keys():
         f.write("{} {}\n".format(bug, ' '.join([str(x) for x in test_data[bug]])))
     print('Train and test created')
@@ -115,19 +147,62 @@ class Preprocess:
       s.append(c)
     return ''.join(s).strip()
 
+  def improve_ner(self, nlp):
+    # Dates
+    dates = []
+    for year in range(2000, 2012):
+        for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Oct', 'Nov', 'Dec']:
+            for day in range(32):
+                dates.append( u'{} {}, {}'.format(day, month, year))
+    
+    list_terms = [dates,
+              (u'Oracle Corporation', u'Oracle', u'Mozilla', u'Google'),
+              (u"the Java", u"Java", u"java", u"the java", u"Javadoc", u'API', 
+               u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', u'SQL', u'sql',
+               u'HTML5', u'HTTP', u'html', u'http', u'html5' u'html 5', u'HTML 5'), 
+              (u"Dennis", u"Bob", u"Kamil", u'Kamil Ignacak'), 
+              (u'WAR', u'zip'),
+              (u'MacOS', u'MacOS X', u'MacOS x', u'Mac OS X', u'Redhat Linux', u'RedHat Enterprise', u'Linux', 
+               u'Eclipse', u'eclipse', u'The Eclipse', u'WindowsXP', u'Windows XP', u'Java Virtual Machine', 
+               u'VM', u'BIRT', u'Birt Web project', u'Birt', u'Birt Charting', u'JIRA', u'linux',
+               u'CDT', u'JREs', u'JRE', u'jre', u'Windows NT', u'SWT', u'CVS', u'Fedora Core',
+              u'Tomcat', u'Axis', u'Red Hat', u'GTK'),
+              (u'JDK', u'JDT', u'AJNature', u'JavaBuilder', u'AJBuilder', u'OclInvalid', u'Aerogear', 
+               u'JSP', u'JGit', u'SDK', u'JEE', u'EPP', u'JEE EPP', u'Widget'),
+              (u'1.', u'1)', u'2.', u'2)', u'3.', u'3)',
+               u'4.', u'4)', u'5.', u'5)', u'6.', u'6)', u'7.', u'7)',
+                u'8.', u'8)', u'9.', u'9)', u'10.', u'10)'),
+              (u'ctrl', u'CTRL', u'F1', u'f1', u'F2', u'f2', u'F3', u'f3',
+               u'f4', u'F4', u'f5', u'F5', u'f6', u'F6', u'f7', u'F7', u'f8', u'F8',
+               u'f9', u'F9', u'f10', u'F10', u'f11', u'F11', u'f12', u'F12', 
+               u'CTRL+F1', u'CTRL+F2', u'CTRL+F3', u'CTRL+F4', u'CTRL+F5', u'CTRL+F6',
+              u'CTRL+F7', u'CTRL+F8', u'CTRL+F9', u'CTRL+F10', u'CTRL+F11', u'CTRL+F12',
+               u'CTRL+TAB', u'ctrl+tab', u'ESC', u'Esc', u'esc', u'CTRL+1', u'CTRL+2', u'CTRL+3', u'CTRL+4',
+              u'CTRL+5', u'CTRL+6', u'CTRL+7', u'CTRL+8', u'CTRL+9', u'CTRL+0', u'ctrl+1', u'ctrl+2',
+              u'ctrl+3', u'ctrl+4', u'ctrl+5', u'ctrl+6', u'ctrl+7', u'ctrl+8', u'ctrl+9', u'ctrl+0',
+              u'crtl + space', u'CTRL + SPACE', u'CTRL + Space', u'CTRL-C', u'CTRL-V', u'ctrl-c', u'ctrl-v')
+             ]
+    list_labels = ['DATE', 'ORG', "LANGUAGE", "PERSON", "FILE", "PRODUCT", "COMPONENT", "STEP NUMBER", "KEYBOARD"]
+
+    for terms, label in zip(list_terms, list_labels):
+        entity_matcher = EntityMatcher(label, nlp, terms, label)
+        nlp.add_pipe(entity_matcher, after='ner')
+
   def ner(self, text):
     corpus = self.nlp(text)
     for row in corpus.ents:
-      text = text.replace(row.text, self.ENTITY_ENUM[row.label_])
+      text = text.replace(row.text, self.ENTITY_ENUM[row.label_] if row.label_ in self.ENTITY_ENUM else row.label_)
     return text
 
   def normalize_text(self, text):
     #try:
-    tokens = re.compile(r'[\W_]+', re.UNICODE).split(str(text))
+    text = re.sub(r'(bug|Bug) (#|)[0-9]{1,}', 'bug id', str(text)) # bug id
+    text = re.sub(r'\w{2,}(.java)', 'java class', text) # .java class files
+    text = self.ner(text)
+    tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
     text = ' '.join([self.func_name_tokenize(token) for token in tokens])
     text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
     text = text[:100000] # limit of spacy lib
-    text = self.ner(text)
     #except:
     #  return 'description'
     text = [word.lower() for word in nltk.word_tokenize(text)]
@@ -200,11 +275,18 @@ class Preprocess:
           versions.add(bug['version'])
           components.add(bug['component'])
           bug_statuses.add(bug['bug_status'])
-          bug['description'] = normalize_text(bug['description'])
+          
+          if 'description' in bug:
+              bug['description'] = normalize_text(bug['description'])
+         
           if 'title' in bug:
-              bug['title'] = normalize_text(bug['title'])
-          else:
-              bug['title'] = ''
+               bug['title'] = normalize_text(bug['title'])
+          
+          if bug['description'] == '':
+              bug['description'] = bug['title']
+
+          if bug['title'] == '':
+              bug['title'] = bug['description']
 
           normalized_bugs_json.append('{}\n'.format(bug.to_json()))
 
@@ -351,15 +433,64 @@ class Preprocess:
           f.write("%d\n" % bug_id)
       print("Bugs not present in dataset: ", list(bugs_invalid))
       bug_pairs = []
-      with open(os.path.join(self.DIR, 'train.txt'), 'r') as f:
+      with open(os.path.join(self.DIR, '{}.txt'.format(self.TRAIN_PATH)), 'r') as f:
           for line in f:
               bug1, bug2 = line.strip().split()
               if bug1 not in bugs_invalid and bug2 not in bugs_invalid:
                 bug_pairs.append([bug1, bug2])
-      with open(os.path.join(self.DIR, 'train.txt'), 'w') as f:
+      with open(os.path.join(self.DIR, '{}.txt'.format(self.TRAIN_PATH)), 'w') as f:
           for pairs in bug_pairs:
               f.write("{} {}\n".format(pairs[0], pairs[1]))
-      
+
+  def create_bucket(self, df):
+    print("Creating the buckets...")
+    buckets = {}
+    # Reading the buckets
+    df_buckets = df[df['dup_id'] == '[]']
+    loop = tqdm(total=df_buckets.shape[0])
+    for row in df_buckets.iterrows():
+        name = row[1]['issue_id']
+        buckets[name] = set()
+        buckets[name].add(name)
+        loop.update(1)
+    loop.close()
+    # Fill the buckets
+    df_duplicates = df[df['dup_id'] != '[]']
+    loop = tqdm(total=df_duplicates.shape[0])
+    for row_bug_id, row_dup_id in df_duplicates[['issue_id', 'dup_id']].values:
+        bucket_name = int(row_dup_id)
+        dup_id = row_bug_id
+        while bucket_name not in buckets:
+            query = df_duplicates[df_duplicates['issue_id'] == bucket_name]
+            if query.shape[0] <= 0: 
+                break
+            bucket_name = int(query['dup_id'])
+        '''
+            Some bugs duplicates point to one master that
+            does not exist in the dataset like openoffice master=152778
+        '''
+        if bucket_name in buckets:
+            buckets[bucket_name].add(dup_id)
+        loop.update(1)
+    loop.close()
+    return buckets
+
+  def getting_pairs(self, array):
+      res = []
+      bug_ids = set()
+      for row in array:
+          dup_bucket, dups = row
+          bug_ids.add(dup_bucket)
+          dups = list(dups)
+          while len(dups) > 1:
+              bucket = dups[0]
+              bug_ids.add(bucket)
+              dups.remove(bucket)
+              for d in dups:
+                  bug_ids.add(d)
+                  res.append([bucket, d])
+      return res, bug_ids    
+  
   def run(self):
     
       # create dataset directory
@@ -380,9 +511,9 @@ class Preprocess:
                           'product','resolution','title','version']
 
       ### Pairs
-      df_train_pair = pd.read_csv('{}.csv'.format(self.PAIRS))
+      #df_train_pair = pd.read_csv('{}.csv'.format(self.PAIRS))
 
-      bug_pairs, bug_ids = self.read_pairs(df_train_pair)
+      bug_pairs, bug_ids = self.read_pairs(df_train)
       bugs_id_dataset = df_train['issue_id'].values
       print("Number of bugs: {}".format(len(bug_ids)))
       print("Number of pairs: {}".format(len(bug_pairs)))

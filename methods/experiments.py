@@ -279,11 +279,11 @@ class Experiment:
             bug_test_ids.append(pair[1])
         return bug_test_ids
 
-    def read_test_data_classification(self, data, bug_set, bug_train_ids):
+    def read_test_data_classification(self, data, bug_set, bug_train_ids, path='test'):
         data_dup_sets = {}
         test_data = []
         print('Reading test data for classification')
-        with open(os.path.join(data, 'test.txt'), 'r') as f:
+        with open(os.path.join(data, '{}.txt'.format(path)), 'r') as f:
             for line in f:
                 bugs = line.strip().split()
                 '''
