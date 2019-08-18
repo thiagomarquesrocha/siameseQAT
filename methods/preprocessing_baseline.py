@@ -26,6 +26,8 @@ import os.path
 from os import path
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
+from contractions import contractions_dict
+
 # Solution from https://github.com/explosion/spaCy/issues/3608
 class EntityMatcher(object):
     #name = "entity_matcher"
@@ -57,33 +59,6 @@ class EntityMatcher(object):
 
 class Preprocess:
 
-  ENTITY_ENUM = {
-    '': 'unknown',
-    'PERSON': 'person',
-    'NORP': 'nationality',
-    'FAC': 'facility',
-    'ORG': 'organization',
-    'GPE': 'country',
-    'LOC': 'location',
-    'PRODUCT': 'product',
-    'EVENT': 'event',
-    'WORK_OF_ART': 'artwork',
-    'LANGUAGE': 'language',
-    'DATE': 'date',
-    'TIME': 'time',
-    # 'PERCENT': 'percent',
-    # 'MONEY': 'money',
-    # 'QUANTITY': 'quantity',
-    # 'ORDINAL': 'ordinal',
-    # 'CARDINAL': 'cardinal',
-    'PERCENT': 'number',
-    'MONEY': 'number',
-    'QUANTITY': 'number',
-    'ORDINAL': 'number',
-    'CARDINAL': 'number',
-    'LAW': 'law'
-}
-
   def __init__(self, DATASET, DOMAIN, PAIRS, COLAB):
     self.MAX_NB_WORDS = 20000
     self.VALIDATION_SPLIT = 0.9
@@ -98,7 +73,76 @@ class Preprocess:
     self.TRAIN_PATH = 'train_chronological'
     self.TEST_PATH = 'test_chronological'
 
+    self.start()
+
     self.improve_ner(self.nlp)
+
+  def start(self):
+
+    self.ENTITY_ENUM = {
+        '': 'unknown',
+        'PERSON': 'person',
+        'NORP': 'nationality',
+        'FAC': 'facility',
+        'ORG': 'organization',
+        'GPE': 'country',
+        'LOC': 'location',
+        'PRODUCT': 'product',
+        'EVENT': 'event',
+        'WORK_OF_ART': 'artwork',
+        'LANGUAGE': 'language',
+        'DATE': 'date',
+        'TIME': 'time',
+        # 'PERCENT': 'percent',
+        # 'MONEY': 'money',
+        # 'QUANTITY': 'quantity',
+        # 'ORDINAL': 'ordinal',
+        # 'CARDINAL': 'cardinal',
+        'PERCENT': 'number',
+        'MONEY': 'number',
+        'QUANTITY': 'number',
+        'ORDINAL': 'number',
+        'CARDINAL': 'number',
+        'LAW': 'law'
+    }
+
+    # Keyboards
+    self.keyboards = [u'ctrl', u'CTRL', u'CTRL\+TAB', u'ctrl\+tab', u'ESC', u'Esc', u'esc', u'crtl \+ space', 
+                u'CTRL \+ SPACE', u'CTRL + Space', u'CTRL\-C', u'CTRL\-V', u'ctrl\-c', u'ctrl\-v', u'Ctrl-z', u'Ctrl - z',
+                u'CTRL-z', u'Ctrl+z', u'ctrl-z', u'ctrl+z', u'CTRL - z', u'Ctrl + z', u'CTRL+z', u'CTRL+Z', u'CTRL + Z',
+                u'CTRL- Z']
+    for i in range(0, 13):
+        # Ctrl+number
+        self.keyboards.append(u'CTRL\+{}'.format(i))
+        self.keyboards.append(u'Ctrl\+{}'.format(i))
+        self.keyboards.append(u'ctrl\+{}'.format(i))
+        self.keyboards.append(u'CTRL \+ {}'.format(i))
+        self.keyboards.append(u'Ctrl \+ {}'.format(i))
+        self.keyboards.append(u'ctrl \+ {}'.format(i))
+        self.keyboards.append(u'CTRL\-{}'.format(i))
+        self.keyboards.append(u'Ctrl\-{}'.format(i))
+        self.keyboards.append(u'ctrl\-{}'.format(i))
+        # F+number
+        self.keyboards.append(u'F{}'.format(i))
+        self.keyboards.append(u'f{}'.format(i))
+
+  def expand_contractions(self, text, contractions_dict):
+      contractions_pattern = re.compile('({})'.format('|'.join(contractions_dict.keys())),
+                                        flags=re.IGNORECASE | re.DOTALL)
+      re.compile('({})'.format('|'.join(contractions_dict.keys())),
+                                        flags=re.IGNORECASE | re.DOTALL)
+      def expand_match(contraction):
+              match = contraction.group(0)
+              first_char = match[0]
+              expanded_contraction = contractions_dict.get(match) \
+                  if contractions_dict.get(match) \
+                  else contractions_dict.get(match.lower())
+              expanded_contraction = expanded_contraction
+              return expanded_contraction
+      
+      expanded_text = contractions_pattern.sub(expand_match, text)
+      expanded_text = re.sub("'", "", expanded_text)
+      return expanded_text
 
   def read_pairs(self, df):
     bug_pairs = []
@@ -156,33 +200,19 @@ class Preprocess:
                 dates.append( u'{} {}, {}'.format(day, month, year))
     
     list_terms = [dates,
-              (u'Oracle Corporation', u'Oracle', u'Mozilla', u'Google'),
-              (u"the Java", u"Java", u"java", u"the java", u"Javadoc", u'API', 
-               u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', u'SQL', u'sql',
-               u'HTML5', u'HTTP', u'html', u'http', u'html5' u'html 5', u'HTML 5'), 
-              (u"Dennis", u"Bob", u"Kamil", u'Kamil Ignacak'), 
-              (u'WAR', u'zip'),
-              (u'MacOS', u'MacOS X', u'MacOS x', u'Mac OS X', u'Redhat Linux', u'RedHat Enterprise', u'Linux', 
-               u'Eclipse', u'eclipse', u'The Eclipse', u'WindowsXP', u'Windows XP', u'Java Virtual Machine', 
-               u'VM', u'BIRT', u'Birt Web project', u'Birt', u'Birt Charting', u'JIRA', u'linux',
-               u'CDT', u'JREs', u'JRE', u'jre', u'Windows NT', u'SWT', u'CVS', u'Fedora Core',
-              u'Tomcat', u'Axis', u'Red Hat', u'GTK'),
-              (u'JDK', u'JDT', u'AJNature', u'JavaBuilder', u'AJBuilder', u'OclInvalid', u'Aerogear', 
-               u'JSP', u'JGit', u'SDK', u'JEE', u'EPP', u'JEE EPP', u'Widget'),
-              (u'1.', u'1)', u'2.', u'2)', u'3.', u'3)',
-               u'4.', u'4)', u'5.', u'5)', u'6.', u'6)', u'7.', u'7)',
-                u'8.', u'8)', u'9.', u'9)', u'10.', u'10)'),
-              (u'ctrl', u'CTRL', u'F1', u'f1', u'F2', u'f2', u'F3', u'f3',
-               u'f4', u'F4', u'f5', u'F5', u'f6', u'F6', u'f7', u'F7', u'f8', u'F8',
-               u'f9', u'F9', u'f10', u'F10', u'f11', u'F11', u'f12', u'F12', 
-               u'CTRL+F1', u'CTRL+F2', u'CTRL+F3', u'CTRL+F4', u'CTRL+F5', u'CTRL+F6',
-              u'CTRL+F7', u'CTRL+F8', u'CTRL+F9', u'CTRL+F10', u'CTRL+F11', u'CTRL+F12',
-               u'CTRL+TAB', u'ctrl+tab', u'ESC', u'Esc', u'esc', u'CTRL+1', u'CTRL+2', u'CTRL+3', u'CTRL+4',
-              u'CTRL+5', u'CTRL+6', u'CTRL+7', u'CTRL+8', u'CTRL+9', u'CTRL+0', u'ctrl+1', u'ctrl+2',
-              u'ctrl+3', u'ctrl+4', u'ctrl+5', u'ctrl+6', u'ctrl+7', u'ctrl+8', u'ctrl+9', u'ctrl+0',
-              u'crtl + space', u'CTRL + SPACE', u'CTRL + Space', u'CTRL-C', u'CTRL-V', u'ctrl-c', u'ctrl-v')
-             ]
-    list_labels = ['DATE', 'ORG', "LANGUAGE", "PERSON", "FILE", "PRODUCT", "COMPONENT", "STEP NUMBER", "KEYBOARD"]
+                  (u'API', u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', u'SQL', u'sql',
+                  u'HTML5', u'HTTP', u'html', u'http', u'html5' u'html 5', u'HTML 5'),
+                  (u'MacOS', u'MacOS X', u'MacOS x', u'Mac OS X', u'Redhat Linux', u'RedHat Enterprise',
+                  u'Linux', u'Windows XP', u'WindowsXP', u'Windows NT', u'Fedora Core', u'Red Hat'),
+                  (u'1.', u'1)', u'2.', u'2)', u'3.', u'3)',
+                  u'4.', u'4)', u'5.', u'5)', u'6.', u'6)', u'7.', u'7)',
+                    u'8.', u'8)', u'9.', u'9)', u'10.', u'10)')
+                ]
+    list_labels = ['DATE', "LANGUAGE", "PRODUCT", "STEP INDEX"]
+
+    self.allow_ner = ['person', 'time', 'number']
+
+    self.allow_ner += [ent.lower() for ent in list_labels]
 
     for terms, label in zip(list_terms, list_labels):
         entity_matcher = EntityMatcher(label, nlp, terms, label)
@@ -190,21 +220,53 @@ class Preprocess:
 
   def ner(self, text):
     corpus = self.nlp(text)
-    for row in corpus.ents:
-      text = text.replace(row.text, self.ENTITY_ENUM[row.label_] if row.label_ in self.ENTITY_ENUM else row.label_)
+    ents, start_char, end_char = [], [], []
+    
+    ents = [self.ENTITY_ENUM[row.label_] if row.label_ in self.ENTITY_ENUM else row.label_ for row in corpus.ents]
+    starts_char = np.array([row.start_char for row in corpus.ents])
+    ends_char = np.array([row.end_char for row in corpus.ents])
+    
+    for index, ent, start_pos, end_pos in zip(range(len(ents)), ents, starts_char, ends_char):
+        if ent.lower() in self.allow_ner:
+            replaced = " {} ".format(ent.lower())
+            text = text[:start_pos] + replaced + text[end_pos:]
+            diff_replaced = len(replaced) - len(text[start_pos:end_pos])
+            if diff_replaced > 0: # push
+                starts_char[index+1:] += diff_replaced
+                ends_char[index+1:] += diff_replaced
+            elif diff_replaced < 0: # pull
+                starts_char[index+1:] -= (diff_replaced * -1)
+                ends_char[index+1:] -= (diff_replaced * -1)
     return text
 
   def normalize_text(self, text):
-    #try:
-    text = re.sub(r'(bug|Bug) (#|)[0-9]{1,}', 'bug id', str(text)) # bug id
-    text = re.sub(r'\w{2,}(.java)', 'java class', text) # .java class files
+    # Bug links
+    text = re.sub(r'(https://bugs.eclipse.org/bugs/show_bug\.cgi\?id\=)[0-9]{1,}', 'bug id', str(text)) # extension file
+    text = re.sub(r'(bug|Bug) (#|)[0-9]{1,}', 'bug id', text) # bug id
+    
+    text = re.sub(r'(build|Build|Build Identifier)( #|#| ||: |:| :)[0-9]{1,}', 'build id', text) # build id
+    text = re.sub(r'(npe|NPE)', 'null pointer exception', text) # npe to null pointer exception
+    text = re.sub(r'(vm|VM)', 'virtual machine', text) # VM to Virtual Machine
+    text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', text) # [0-9] min
+    # Extension files
+    text = re.sub(r'(WAR|zip|ZIP)', 'extension file', text) # extension file
+    text = re.sub(r'.(zip|txt|java|js|html)', ' extension file', text) # extension file
+    # Keyboards
+    text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
+    # Contraction
+    text=self.expand_contractions(text, contractions_dict)
+    #text = re.sub(r'(doesn\'t)', 'does not', text) # does not 
+    #text = re.sub(r'\w{2,}(.java)', 'code class', str(text)) # .java class files
+
+    # NER processing
+    text = text[:100000] # limit of spacy lib
     text = self.ner(text)
+
     tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
     text = ' '.join([self.func_name_tokenize(token) for token in tokens])
+    #     text = ' '.join(tokens)
+    
     text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
-    text = text[:100000] # limit of spacy lib
-    #except:
-    #  return 'description'
     text = [word.lower() for word in nltk.word_tokenize(text)]
     text = ' '.join([word for word in text]).encode('utf-8')
     return text
