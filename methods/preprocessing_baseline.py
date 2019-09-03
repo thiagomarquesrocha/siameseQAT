@@ -200,7 +200,8 @@ class Preprocess:
                 dates.append( u'{} {}, {}'.format(day, month, year))
     
     list_terms = [dates,
-                  (u'API', u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', u'SQL', u'sql',
+                  (u'API', u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', 
+                  u'SQL', u'sql', u'CSS', u'css',
                   u'HTML5', u'HTTP', u'html', u'http', u'html5' u'html 5', u'HTML 5'),
                   (u'MacOS', u'MacOS X', u'MacOS x', u'Mac OS X', u'Redhat Linux', u'RedHat Enterprise',
                   u'Linux', u'Windows XP', u'WindowsXP', u'Windows NT', u'Fedora Core', u'Red Hat'),
@@ -244,13 +245,13 @@ class Preprocess:
     text = re.sub(r'(https://bugs.eclipse.org/bugs/show_bug\.cgi\?id\=)[0-9]{1,}', 'bug id', str(text)) # extension file
     text = re.sub(r'(bug|Bug) (#|)[0-9]{1,}', 'bug id', text) # bug id
     
-    text = re.sub(r'(build|Build|Build Identifier)( #|#| ||: |:| :)[0-9]{1,}', 'build id', text) # build id
+    text = re.sub(r'(build|Build|Build Identifier|build identifier)( #|#| | |: |:| :| I| i)[0-9]{1,}', 'build id', text) # build id
     text = re.sub(r'(npe|NPE)', 'null pointer exception', text) # npe to null pointer exception
     text = re.sub(r'(vm|VM)', 'virtual machine', text) # VM to Virtual Machine
     text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', text) # [0-9] min
     # Extension files
-    text = re.sub(r'(WAR|zip|ZIP)', 'extension file', text) # extension file
-    text = re.sub(r'.(zip|txt|java|js|html)', ' extension file', text) # extension file
+    text = re.sub(r'(WAR|zip|ZIP|css)', 'extension file', text) # extension file
+    text = re.sub(r'.(zip|txt|java|js|html|php|pdf|exe|doc|jar|xml)', ' extension file', text) # extension file
     # Keyboards
     text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
     # Contraction
