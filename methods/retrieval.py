@@ -9,9 +9,9 @@ if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
 # from methods.baseline import Baseline
-from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
-        MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
-from keras.models import Model
+# from keras.layers import Conv1D, Input, Add, Activation, Dropout, Embedding, \
+#         MaxPooling1D, GlobalMaxPool1D, Flatten, Dense, Concatenate, BatchNormalization
+# from keras.models import Model
 from sklearn.neighbors import NearestNeighbors
 from operator import itemgetter
 

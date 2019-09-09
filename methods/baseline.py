@@ -8,7 +8,7 @@ import random
 import numpy as np
 from tqdm import tqdm_notebook as tqdm
 
-from keras.utils import to_categorical
+from tensorflow.python.keras.utils import to_categorical
 from sklearn.preprocessing import LabelEncoder
 
 from datetime import datetime

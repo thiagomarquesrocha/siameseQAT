@@ -128,7 +128,7 @@ class Experiment:
 
         for bug_id in tests:
             bug = bug_set[bug_id]
-            if method == 'keras':
+            if method == 'keras' or method == 'bert':
                 title_data.append(bug['title_word'])
                 desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
@@ -143,6 +143,8 @@ class Experiment:
         # Get embedding of all buckets
         if method == 'keras':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
+        elif method == 'bert':
+            embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
         elif method == 'dwen':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
@@ -179,7 +181,7 @@ class Experiment:
             ground_truth_fix.remove(test_bug_id)
 
             bug = bug_set[test_bug_id]
-            if method == 'keras':
+            if method == 'keras' or method == 'bert':
                 title_data.append(bug['title_word'])
                 desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
@@ -194,6 +196,8 @@ class Experiment:
         # Get embedding of all buckets
         if method == 'keras':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
+        elif method == 'bert':
+            embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
         elif method == 'dwen':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
