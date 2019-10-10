@@ -73,7 +73,9 @@ class Experiment:
             vector = row['vector']
             rank, dist = annoy.get_nns_by_vector(vector, 30, include_distances=True)
             indices_test.append(rank)
-            distance_test.append(1 - np.array(dist)) # normalize the similarity between 0 and 1
+            max_dist = np.amax(dist)
+            max_dist = max_dist if(max_dist > 1) else 1
+            distance_test.append(max_dist - np.array(dist)) # normalize the similarity between 0 and 1
         if(verbose): loop.close()
         return X_test, distance_test, indices_test
     
@@ -128,9 +130,13 @@ class Experiment:
 
         for bug_id in tests:
             bug = bug_set[bug_id]
-            if method == 'keras' or method == 'bert':
+            if method == 'keras':
                 title_data.append(bug['title_word'])
                 desc_data.append(bug['description_word'])
+                info_data.append(self.retrieval.get_info(bug))
+            if method == 'bert':
+                title_data.append(bug['title_word_bert'])
+                desc_data.append(bug['description_word_bert'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_word'])
@@ -144,7 +150,7 @@ class Experiment:
         if method == 'keras':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
         elif method == 'bert':
-            embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+            embed_test = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
         elif method == 'dwen':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
@@ -181,9 +187,13 @@ class Experiment:
             ground_truth_fix.remove(test_bug_id)
 
             bug = bug_set[test_bug_id]
-            if method == 'keras' or method == 'bert':
+            if method == 'keras':
                 title_data.append(bug['title_word'])
                 desc_data.append(bug['description_word'])
+                info_data.append(self.retrieval.get_info(bug))
+            if method == 'bert':
+                title_data.append(bug['title_word_bert'])
+                desc_data.append(bug['description_word_bert'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_word'])
@@ -197,7 +207,7 @@ class Experiment:
         if method == 'keras':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
         elif method == 'bert':
-            embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+            embed_queries = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
         elif method == 'dwen':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':

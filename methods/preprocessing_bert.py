@@ -27,6 +27,8 @@ from os import path
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
 from contractions import contractions_dict
+from keras_bert import Tokenizer
+from keras_bert import load_vocabulary
 
 # Solution from https://github.com/explosion/spaCy/issues/3608
 class EntityMatcher(object):
@@ -72,10 +74,24 @@ class Preprocess:
     self.bugs_saved = []
     self.TRAIN_PATH = 'train_chronological'
     self.TEST_PATH = 'test_chronological'
+    self.MAX_SEQUENCE_LENGTH_T = 50
+    self.MAX_SEQUENCE_LENGTH_D = 150
 
     self.start()
+    self.tokenizer_init()
 
     self.improve_ner(self.nlp)
+
+  def tokenizer_init(self):
+    pretrained_path = 'uncased_L-12_H-768_A-12'
+    config_path = os.path.join(pretrained_path, 'bert_config.json')
+    model_path = os.path.join(pretrained_path, 'bert_model.ckpt')
+    vocab_path = os.path.join(pretrained_path, 'vocab.txt')
+
+    token_dict = load_vocabulary(vocab_path)
+    print("Total vocabulary loaded: {}".format(len(token_dict)))
+
+    self.tokenizer = Tokenizer(token_dict)
 
   def start(self):
 
@@ -208,9 +224,6 @@ class Preprocess:
         steps.append(u'{}) '.format(i))
     
     list_terms = [dates,
-                #   (u'API', u"The Javadoc", u"the Javadoc", u"C++", u'c++', u'C/C++', u'XML', u'xml', 
-                #   u'SQL', u'sql', u'CSS', u'css',
-                #   u'HTML5', u'HTTP', u'html', u'http', u'html5' u'html 5', u'HTML 5'),
                   (u'MacOS', u'MacOS X', u'MacOS x', u'Mac OS X', u'Redhat Linux', u'RedHat Enterprise',
                   u'Linux', u'Windows XP', u'WindowsXP', u'Windows NT', u'Fedora Core', u'Red Hat'),
                   steps
@@ -247,35 +260,7 @@ class Preprocess:
     return text
 
   def normalize_text(self, text):
-    # Bug links
-    #text = re.sub(r'(https://bugs.eclipse.org/bugs/show_bug\.cgi\?id\=)[0-9]{1,}', 'bug id', text) # extension file
-    #text = re.sub(r'(bug|Bug) (#|)[0-9]{1,}', 'bug id', text) # bug id
-    
-    #text = re.sub(r'(build|Build|Build Identifier|build identifier)( #|#| | |: |:| :| I| i)[0-9]{1,}', 'build id', text) # build id
-    #text = re.sub(r'(npe|NPE)', 'null pointer exception', text) # npe to null pointer exception
-    #text = re.sub(r'(vm|VM)', 'virtual machine', text) # VM to Virtual Machine
-    text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', str(text)) # [0-9] min
-    # Extension files
-    #text = re.sub(r'(WAR|zip|ZIP|css)', 'extension file', text) # extension file
-    #text = re.sub(r'.(zip|txt|java|js|html|php|pdf|exe|doc|jar|xml)', ' extension file', text) # extension file
-    # Memory 
-    text = re.sub(r'kB', 'kb', text)
-    # Keyboards
-    text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
-    # Contraction
-    text=self.expand_contractions(text, contractions_dict)
-
-    # NER processing
-    text = text[:100000] # limit of spacy lib
-    text = self.ner(text)
-
-    tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
-    text = ' '.join([self.func_name_tokenize(token) for token in tokens])
-    #     text = ' '.join(tokens)
-    
-    text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
-    text = [word.lower() for word in nltk.word_tokenize(text)]
-    text = ' '.join([word for word in text]).encode('utf-8')
+    text = " ".join(self.tokenizer.tokenize(str(text)))
     return text
 
   def save_dict(self, set, filename):
@@ -345,29 +330,30 @@ class Preprocess:
           components.add(bug['component'])
           bug_statuses.add(bug['bug_status'])
           
-          if 'description' in bug:
-              bug['description'] = normalize_text(bug['description'])
-         
-          if 'title' in bug:
-               bug['title'] = normalize_text(bug['title'])
-          
-          if bug['description'] == '':
+          if 'description' not in bug or bug['description'] == '':
               bug['description'] = bug['title']
 
-          if bug['title'] == '':
+          if 'title' not in bug or bug['title'] == '':
               bug['title'] = bug['description']
-
+          
+          description = normalize_text(bug['description'])
+          bug['description_original'] = bug['description']
+          bug['description_bert'] = description
+          title = normalize_text(bug['title'])
+          bug['title_original'] = bug['title']
+          bug['title_bert'] = title
+               
           normalized_bugs_json.append('{}\n'.format(bug.to_json()))
 
-          text.append(bug['description'])
-          text.append(bug['title'])
+          text.append(bug['description_bert'])
+          text.append(bug['title_bert'])
           loop.update(1)
     return [products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json]
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
     word_freq = self.build_freq_dict(train_text)
     print('word vocabulary')
-    word_vocab = self.save_vocab(word_freq, MAX_NB_WORDS, 'word_vocab.pkl')
+    word_vocab = self.save_vocab(word_freq, MAX_NB_WORDS, 'word_vocab_bert.pkl')
     return word_vocab
 
   def build_freq_dict(self, train_text):
@@ -435,12 +421,12 @@ class Preprocess:
           #bug = json.loads(line)
           #print(bug)
           cont+=1
-          bug['description_word'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['description'].split()]
-          if len(bug['title']) == 0:
-              bug['title'] = bug['description'][:10]
-          bug['title_word'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['title'].split()]
-          #bug.pop('description')
-          #bug.pop('title')
+          ids, segments = self.tokenizer.encode('' if bug['description_original'] == None else bug['description_original'], max_len=self.MAX_SEQUENCE_LENGTH_D)
+          bug['description_word_bert'] = ids
+          ids, segments = self.tokenizer.encode('' if bug['title_original'] == None else bug['title_original'], max_len=self.MAX_SEQUENCE_LENGTH_T)
+          bug['title_word_bert'] = ids
+          bug.pop('description_original')
+          bug.pop('title_original')
           bugs_set[bug['issue_id']] = bug
           with open(os.path.join(bug_dir, str(bug['issue_id']) + '.pkl'), 'wb') as f:
               pickle.dump(bug, f)
