@@ -24,6 +24,7 @@ from keras import optimizers
 from keras import backend as K
 import tensorflow as tf
 import pandas as pd
+from annoy import AnnoyIndex
 
 class Baseline:
 
@@ -231,8 +232,8 @@ class Baseline:
         for bug_id in tqdm(self.bug_ids):
             try:
                 bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-                title_padding.append(bug['title_word'])
-                desc_padding.append(bug['description_word'])
+                title_padding.append(bug['title_word_bert'][:self.MAX_SEQUENCE_LENGTH_T])
+                desc_padding.append(bug['description_word_bert'][:self.MAX_SEQUENCE_LENGTH_D])
                 self.bug_set[bug_id] = bug
                 #break
             except:
@@ -243,11 +244,14 @@ class Baseline:
         desc_padding = self.data_padding(desc_padding, self.MAX_SEQUENCE_LENGTH_D)
         
         for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
-            self.bug_set[bug_id]['title_word'] = bug_title
-            self.bug_set[bug_id]['description_word'] = bug_desc
             bug = self.bug_set[bug_id]
-            self.sentence_dict[",".join(bug_title.astype(str))] = bug['title']
-            self.sentence_dict[",".join(bug_desc.astype(str))] = bug['description']
+            self.sentence_dict[",".join(np.array(bug_title, str))] = bug['title']
+            self.sentence_dict[",".join(np.array(bug_desc, str))] = bug['description']
+            bug['title'] = bug['title_bert']
+            bug['description'] = bug['description_bert']
+            bug['title_word'] = bug_title
+            bug['description_word'] = bug_desc
+            bug['textual_word'] = np.concatenate([bug_title, bug_desc], -1)
         
         if len(removed) > 0:
             for x in removed:
@@ -255,15 +259,15 @@ class Baseline:
             self.removed = removed
             print("{} were removed. To see the list call self.removed".format(len(removed)))
 
-    @staticmethod
-    def get_neg_bug(invalid_bugs, bug_ids):
-        neg_bug = random.choice(bug_ids)
+    def get_neg_bug(self, invalid_bugs, bug_ids, issues_by_buckets, all_bugs):
+        neg_bug = random.choice(all_bugs)
+        bug_ids = list(bug_ids)
         try:
-            while neg_bug in invalid_bugs:
+            while neg_bug in invalid_bugs or neg_bug not in issues_by_buckets:
                 neg_bug = random.choice(bug_ids)
         except:
             invalid_bugs = [invalid_bugs]
-            while neg_bug in invalid_bugs:
+            while neg_bug in invalid_bugs or neg_bug not in issues_by_buckets:
                 neg_bug = random.choice(bug_ids)
         return neg_bug
 
@@ -358,10 +362,41 @@ class Baseline:
         batch['title'].append(bug['title_word'])
         batch['desc'].append(bug['description_word'])
 
+    def get_neg_bug_semihard(self, retrieval, model, batch_bugs, anchor, invalid_bugs, method='keras'):
+        if method == 'keras':
+            vector = model.predict([ np.array([self.bug_set[anchor]['title_word']]), 
+                                    np.array([self.bug_set[anchor]['description_word']]), 
+                                    np.array([retrieval.get_info(self.bug_set[anchor])]) ])
+        elif method == 'bert':
+            vector = model.predict([ np.array([self.bug_set[anchor]['title_word']]),
+                                    np.zeros_like(np.array([self.bug_set[anchor]['title_word']])), 
+                                    np.array([self.bug_set[anchor]['description_word']]), 
+                                    np.zeros_like(np.array([self.bug_set[anchor]['description_word']])),
+                                    np.array([retrieval.get_info(self.bug_set[anchor])]) ])
+        annoy = AnnoyIndex(vector.shape[1])
+        embeds = []
+        title_data, desc_data, info_data = [], [], []
+        batch_bugs_wo_positives = list(set(batch_bugs) - set(invalid_bugs)) 
+        for bug_id in batch_bugs_wo_positives:
+            bug = self.bug_set[bug_id]
+            title_data.append(bug['title_word'])
+            desc_data.append(bug['description_word'])
+            info_data.append(retrieval.get_info(bug))
+        if method == 'keras':
+            embeds = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
+        elif method == 'bert':
+            embeds = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+        for bug_id, embed in zip(batch_bugs_wo_positives, embeds):
+            annoy.add_item(bug_id, embed)
+        annoy.build(10) # 10 trees
+        rank = annoy.get_nns_by_vector(vector[0], 20, include_distances=False)
+        neg_bug = rank[0]
+        return neg_bug
+
     # data - path
     # batch_size - 128
     # n_neg - 1
-    def batch_iterator(self, data, dup_sets, bug_ids, batch_size, n_neg):
+    def batch_iterator(self, retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
         # global train_data
         # global self.dup_sets
         # global self.bug_ids
@@ -375,18 +410,34 @@ class Baseline:
 
         n_train = len(data)
 
-        batch_triplets = []
-        
+        batch_triplets, batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg, batch_bugs = [], [], [], [], []
+
+        all_bugs = list(issues_by_buckets.keys())
+
         for offset in range(batch_size):
-            neg_bug = Baseline.get_neg_bug(dup_sets[data[offset][0]], bug_ids)
-            anchor, pos, neg = data[offset][0], data[offset][1], neg_bug
-            bug_anchor = self.bug_set[anchor]
-            bug_pos = self.bug_set[pos]
-            bug_neg = self.bug_set[neg]
+            anchor, pos = data[offset][0], data[offset][1]
+            batch_bugs_anchor.append(anchor)
+            batch_bugs_pos.append(pos)
+            batch_bugs += dup_sets[anchor]
+        
+        for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
+            while True:
+                if model == None:
+                    neg = self.get_neg_bug(anchor, dup_sets[anchor], issues_by_buckets, all_bugs)
+                else:
+                    neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, dup_sets[anchor])
+                bug_anchor = self.bug_set[anchor]
+                bug_pos = self.bug_set[pos]
+                if neg not in self.bug_set:
+                    continue
+                bug_neg = self.bug_set[neg]
+                break
+            
             self.read_batch_bugs(batch_input, bug_anchor)
             self.read_batch_bugs(batch_pos, bug_pos)
             self.read_batch_bugs(batch_neg, bug_neg)
-            batch_triplets.append([data[offset][0], data[offset][1], neg_bug])
+            # triplet bug and master
+            batch_triplets.append([anchor, pos, neg])
 
         batch_input['title'] = np.array(batch_input['title'])
         batch_input['desc'] = np.array(batch_input['desc'])
@@ -416,35 +467,6 @@ class Baseline:
 
     def get_bug_set(self):
         return self.bug_set
-
-    def display_batch(self, data, dup_set, bug_ids, nb):
-        _, input_sample, input_pos, input_neg, v_sim = self.batch_iterator(data, dup_set, bug_ids, nb, 1)
-
-        t_a, t_b, d_a, d_b = [], [], [], []
-        
-        t_a = input_sample['title']
-        t_b = input_pos['title']
-        d_a = input_sample['description']
-        d_b = input_pos['description']
-        
-        for t_a, t_b_pos, t_b_neg, d_a, d_b_pos, d_b_neg, sim in zip(input_sample['title'], input_pos['title'], input_neg['title'], 
-                                                                input_sample['description'], input_pos['description'], input_neg['description'], v_sim):
-            
-
-            t_b = t_b_pos if sim == 1 else t_b_neg
-            d_b = d_b_pos if sim == 1 else t_b_neg
-            
-            #print(t_a.shape)
-            key_t_a = ','.join(t_a.astype(str))
-            key_t_b = ','.join(t_b.astype(str))
-            key_d_a = ','.join(d_a.astype(str))
-            key_d_b = ','.join(d_b.astype(str))
-            print("***Title***: {}".format(self.sentence_dict[key_t_a]))
-            print("***Title***: {}".format(self.sentence_dict[key_t_b]))
-            print("***Description***: {}".format(self.sentence_dict[key_d_a]))
-            print("***Description***: {}".format(self.sentence_dict[key_d_b]))
-            print("***similar =", str(sim))
-            print("########################")
 
     def load_vocabulary(self, vocab_file):
         try:

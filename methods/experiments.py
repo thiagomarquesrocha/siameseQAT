@@ -6,6 +6,7 @@ from keras.models import load_model
 import pandas as pd
 from tqdm import tqdm_notebook as tqdm
 import os
+import random
 
 class Experiment:
 
@@ -18,6 +19,133 @@ class Experiment:
     
     def load_bugs(self):
         self.baseline.load_bugs()
+
+    def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
+        return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets)
+
+    def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, n_neg, issues_by_buckets, INCLUDE_MASTER=False):
+        baseline = self.baseline
+        # global train_data
+        # global self.dup_sets
+        # global self.bug_ids
+        # global self.bug_set
+
+        random.shuffle(data)
+
+        batch_input, batch_pos, batch_neg, master_batch_input, master_batch_neg = {'title' : [], 'desc' : [], 'info' : []}, \
+                                                {'title' : [], 'desc' : [], 'info' : []}, \
+                                                    {'title' : [], 'desc' : [], 'info' : []},\
+                                                        {'title' : [], 'desc' : [], 'info' : []}, \
+                                                            {'title' : [], 'desc' : [], 'info' : []}
+
+        n_train = len(data)
+        all_bugs = list(issues_by_buckets.keys())
+        batch_triplets, batch_bugs_anchor, batch_bugs_pos, 
+            batch_bugs_neg, batch_dups, batch_bugs = [], [], [], [], [], []
+
+        batch_masters = set()
+
+        for offset in range(batch_size):
+            anchor, pos = data[offset][0], data[offset][1]
+            batch_bugs_anchor.append(anchor)
+            batch_bugs_pos.append(pos)
+            batch_dups += dup_sets[anchor]
+            batch_bugs.append(anchor)
+            batch_bugs.append(pos)
+        
+        for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
+            while True:
+                if model == None:
+                    neg = baseline.get_neg_bug(anchor, dup_sets[anchor], issues_by_buckets, all_bugs)
+                else:
+                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_dups, anchor, dup_sets[anchor], method='bert')
+
+                if neg not in baseline.bug_set:
+                    continue
+                batch_bugs.append(neg)
+                batch_bugs_neg.append(neg)
+                break
+        # read only masters
+        if INCLUDE_MASTER:
+            for bug_id in batch_bugs:
+                batch_masters.add(issues_by_buckets[bug_id])
+            batch_masters = list(batch_masters)
+        for anchor, pos, neg in zip(batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg):
+            bug_anchor = baseline.bug_set[anchor]
+            bug_pos = baseline.bug_set[pos]
+            bug_neg = baseline.bug_set[neg]
+            # master anchor and neg
+            if INCLUDE_MASTER:
+                master_anchor = baseline.bug_set[issues_by_buckets[anchor]]
+                while True:
+                    if model == None:
+                        master_neg_id = baseline.get_neg_bug(issues_by_buckets[anchor], dup_sets[anchor], issues_by_buckets, all_bugs)
+                    else:
+                        invalids_masters = [issues_by_buckets[anchor]]
+                        master_neg_id = baseline.get_neg_bug_semihard(model, batch_masters, issues_by_buckets[anchor], invalids_masters, method='bert')
+                    
+                    if master_neg_id not in baseline.bug_set:
+                        continue
+                    master_neg = baseline.bug_set[master_neg_id]
+                    break
+            
+            baseline.read_batch_bugs(batch_input, bug_anchor)
+            baseline.read_batch_bugs(batch_pos, bug_pos)
+            baseline.read_batch_bugs(batch_neg, bug_neg)
+            # master anchor and neg
+            if INCLUDE_MASTER:
+                baseline.read_batch_bugs(master_batch_input, master_anchor)
+                baseline.read_batch_bugs(master_batch_neg, master_neg)
+                # quintet for bugs and masters
+                batch_triplets.append([anchor, pos, neg, master_anchor, master_neg])
+            else: # triplet for bugs
+                batch_triplets.append([anchor, pos, neg])
+            
+        title_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+
+        batch_input['title'] = { 'token' : np.array(batch_input['title']), 'segment' : title_ids }
+        batch_input['desc'] = { 'token' : np.array(batch_input['desc']), 'segment' : description_ids }
+        batch_input['info'] = np.array(batch_input['info'])
+        batch_pos['title'] = { 'token' : np.array(batch_pos['title']), 'segment' : title_ids }
+        batch_pos['desc'] = { 'token' : np.array(batch_pos['desc']), 'segment' : description_ids }
+        batch_pos['info'] = np.array(batch_pos['info'])
+        batch_neg['title'] = { 'token' : np.array(batch_neg['title']), 'segment' : title_ids }
+        batch_neg['desc'] = { 'token' : np.array(batch_neg['desc']), 'segment' : description_ids }
+        batch_neg['info'] = np.array(batch_neg['info'])
+        
+        # master
+        if INCLUDE_MASTER:
+            master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_ids }
+            master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_ids }
+            master_batch_input['info'] = np.array(master_batch_input['info'])
+            
+            master_batch_neg['title'] = { 'token' : np.array(master_batch_neg['title']), 'segment' : title_ids }
+            master_batch_neg['desc'] = { 'token' : np.array(master_batch_neg['desc']), 'segment' : description_ids }
+            master_batch_neg['info'] = np.array(master_batch_neg['info'])
+
+        n_half = len(batch_triplets) // 2
+        if n_half > 0:
+            pos = np.full((1, n_half), 1)
+            neg = np.full((1, n_half), 0)
+            sim = np.concatenate([pos, neg], -1)[0]
+        else:
+            sim = np.array([np.random.choice([1, 0])])
+
+        input_sample, input_pos, input_neg, master_input_sample, master_neg = {}, {}, {}, {}, {}
+
+        input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'], 'info' : batch_input['info'] }
+        input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
+        input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
+        # master
+        if INCLUDE_MASTER: 
+            master_input_sample = { 'title' : master_batch_input['title'], 'description' : master_batch_input['desc'], 
+                                'info' : master_batch_input['info'] }
+            master_neg = { 'title' : master_batch_neg['title'], 'description' : master_batch_neg['desc'], 
+                                'info' : master_batch_neg['info'] }
+            return batch_triplets, input_sample, input_pos, input_neg, master_input_sample, master_neg, sim #sim
+        else:
+            return batch_triplets, input_sample, input_pos, input_neg, sim #sim
 
     def prepare_dataset(self, issues_by_buckets, path_train='train', path_test='test'):
         self.baseline.prepare_dataset(issues_by_buckets, path_train, path_test)
@@ -135,8 +263,8 @@ class Experiment:
                 desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
             if method == 'bert':
-                title_data.append(bug['title_word_bert'])
-                desc_data.append(bug['description_word_bert'])
+                title_data.append(bug['title_word'])
+                desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_word'])
@@ -192,8 +320,8 @@ class Experiment:
                 desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
             if method == 'bert':
-                title_data.append(bug['title_word_bert'])
-                desc_data.append(bug['description_word_bert'])
+                title_data.append(bug['title_word'])
+                desc_data.append(bug['description_word'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_word'])
