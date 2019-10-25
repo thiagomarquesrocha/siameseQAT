@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm_notebook as tqdm
 import os
 import random
+from sklearn.cluster import KMeans
 
 class Experiment:
 
@@ -23,8 +24,30 @@ class Experiment:
     def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
         return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets)
 
-    def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, n_neg, issues_by_buckets, INCLUDE_MASTER=False):
+    def get_centroid(self, dups, model):
         baseline = self.baseline
+        retrieval = self.retrieval
+        title_data, desc_data, info_data = [], [], []
+        dups = [bug for bug in dups if bug in baseline.bug_set]
+        for bug_id in dups:
+            bug = baseline.bug_set[bug_id]
+            title_data.append(bug['title_word'])
+            desc_data.append(bug['description_word'])
+            info_data.append(retrieval.get_info(bug))
+        embeds = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+        kmeans = KMeans(n_clusters=1, random_state=0).fit(embeds)
+        centroid = kmeans.cluster_centers_[0]
+        annoy = AnnoyIndex(centroid.shape[0])
+        for bug_id, embed in zip(dups, embeds):
+            annoy.add_item(bug_id, embed)
+        annoy.build(10) # 10 trees
+        rank = annoy.get_nns_by_vector(centroid, 1, include_distances=False)
+        master = rank[0]
+        return baseline.bug_set[master]
+    def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
+                                n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False):
+        baseline = self.baseline
+        retrieval = self.retrieval
         # global train_data
         # global self.dup_sets
         # global self.bug_ids
@@ -40,10 +63,8 @@ class Experiment:
 
         n_train = len(data)
         all_bugs = list(issues_by_buckets.keys())
-        batch_triplets, batch_bugs_anchor, batch_bugs_pos, 
+        batch_triplets, batch_bugs_anchor, batch_bugs_pos, \
             batch_bugs_neg, batch_dups, batch_bugs = [], [], [], [], [], []
-
-        batch_masters = set()
 
         for offset in range(batch_size):
             anchor, pos = data[offset][0], data[offset][1]
@@ -60,16 +81,12 @@ class Experiment:
                 else:
                     neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_dups, anchor, dup_sets[anchor], method='bert')
 
-                if neg not in baseline.bug_set:
+                if neg not in baseline.bug_set \
+                    or ((INCLUDE_MASTER or USE_CENTROID) and issues_by_buckets[neg] not in baseline.bug_set):
                     continue
                 batch_bugs.append(neg)
                 batch_bugs_neg.append(neg)
                 break
-        # read only masters
-        if INCLUDE_MASTER:
-            for bug_id in batch_bugs:
-                batch_masters.add(issues_by_buckets[bug_id])
-            batch_masters = list(batch_masters)
         for anchor, pos, neg in zip(batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg):
             bug_anchor = baseline.bug_set[anchor]
             bug_pos = baseline.bug_set[pos]
@@ -77,23 +94,17 @@ class Experiment:
             # master anchor and neg
             if INCLUDE_MASTER:
                 master_anchor = baseline.bug_set[issues_by_buckets[anchor]]
-                while True:
-                    if model == None:
-                        master_neg_id = baseline.get_neg_bug(issues_by_buckets[anchor], dup_sets[anchor], issues_by_buckets, all_bugs)
-                    else:
-                        invalids_masters = [issues_by_buckets[anchor]]
-                        master_neg_id = baseline.get_neg_bug_semihard(model, batch_masters, issues_by_buckets[anchor], invalids_masters, method='bert')
-                    
-                    if master_neg_id not in baseline.bug_set:
-                        continue
-                    master_neg = baseline.bug_set[master_neg_id]
-                    break
+                master_neg_id = issues_by_buckets[neg]
+                master_neg = baseline.bug_set[master_neg_id]
+            elif USE_CENTROID:
+                master_anchor = self.get_centroid(retrieval.buckets[issues_by_buckets[anchor]], model)
+                master_neg = self.get_centroid(retrieval.buckets[issues_by_buckets[neg]], model)
             
             baseline.read_batch_bugs(batch_input, bug_anchor)
             baseline.read_batch_bugs(batch_pos, bug_pos)
             baseline.read_batch_bugs(batch_neg, bug_neg)
             # master anchor and neg
-            if INCLUDE_MASTER:
+            if INCLUDE_MASTER or USE_CENTROID:
                 baseline.read_batch_bugs(master_batch_input, master_anchor)
                 baseline.read_batch_bugs(master_batch_neg, master_neg)
                 # quintet for bugs and masters
@@ -115,7 +126,7 @@ class Experiment:
         batch_neg['info'] = np.array(batch_neg['info'])
         
         # master
-        if INCLUDE_MASTER:
+        if INCLUDE_MASTER or USE_CENTROID:
             master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_ids }
             master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_ids }
             master_batch_input['info'] = np.array(master_batch_input['info'])
@@ -138,7 +149,7 @@ class Experiment:
         input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
         input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
         # master
-        if INCLUDE_MASTER: 
+        if INCLUDE_MASTER or USE_CENTROID: 
             master_input_sample = { 'title' : master_batch_input['title'], 'description' : master_batch_input['desc'], 
                                 'info' : master_batch_input['info'] }
             master_neg = { 'title' : master_batch_neg['title'], 'description' : master_batch_neg['desc'], 
