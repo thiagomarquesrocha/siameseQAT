@@ -8,6 +8,8 @@ from tqdm import tqdm_notebook as tqdm
 import os
 import random
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import LabelEncoder
+from keras.utils import to_categorical
 
 class Experiment:
 
@@ -23,6 +25,38 @@ class Experiment:
 
     def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
         return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets)
+
+    def batch_classification_test(self, path):
+        encoder = LabelEncoder()
+        
+        batch_1, batch_2 = {'title' : [], 'desc' : [], 'info' : []}, \
+                                            {'title' : [], 'desc' : [], 'info' : []}
+        
+        batch_triplets, sim = [], []
+        
+        with open(path, 'r') as file_in:
+            for row in file_in:
+                test = row.split()
+                bug1 = int(test[0])
+                bug2 = int(test[1])
+                label = int(test[2])
+                bug1 = self.baseline.bug_set[bug1]
+                bug2 = self.baseline.bug_set[bug2]
+                self.baseline.read_batch_bugs(batch_1, bug1)
+                self.baseline.read_batch_bugs(batch_2, bug2)
+                sim.append(label)
+        
+        sim = encoder.fit_transform(sim)
+        sim = to_categorical(sim)
+
+        title_a = np.array(batch_1['title'])
+        title_b = np.array(batch_2['title'])
+        desc_a = np.array(batch_1['desc'])
+        desc_b = np.array(batch_2['desc'])
+        info_a = np.array(batch_1['info'])
+        info_b = np.array(batch_2['info'])
+        
+        return title_a, title_b, desc_a, desc_b, info_a, info_b, sim
 
     def get_centroid(self, dups, model):
         baseline = self.baseline
@@ -473,7 +507,7 @@ class Experiment:
                 if len(bugs) < 2:
                     continue
                 query = int(bugs[0])
-                dups = bugs[:1]
+                dups = bugs[1:]
                 if query not in data_dup_sets:
                     data_dup_sets[query] = set()
                 for bug in dups:
