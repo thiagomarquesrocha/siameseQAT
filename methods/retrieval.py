@@ -116,14 +116,22 @@ class Retrieval():
             last_query['bug_id'] = bug_id
 
     def get_info(self, bug):
-        info = np.concatenate((
-            self.baseline.to_one_hot(bug['bug_severity'], self.baseline.info_dict['bug_severity']),
-            self.baseline.to_one_hot(bug['bug_status'], self.baseline.info_dict['bug_status']),
-            self.baseline.to_one_hot(bug['component'], self.baseline.info_dict['component']),
-            self.baseline.to_one_hot(bug['priority'], self.baseline.info_dict['priority']),
-            self.baseline.to_one_hot(bug['product'], self.baseline.info_dict['product']),
-            self.baseline.to_one_hot(bug['version'], self.baseline.info_dict['version']))
-        )
+        if self.baseline.DOMAIN != 'firefox':
+            info = np.concatenate((
+                self.baseline.to_one_hot(bug['bug_severity'], self.baseline.info_dict['bug_severity']),
+                self.baseline.to_one_hot(bug['bug_status'], self.baseline.info_dict['bug_status']),
+                self.baseline.to_one_hot(bug['component'], self.baseline.info_dict['component']),
+                self.baseline.to_one_hot(bug['priority'], self.baseline.info_dict['priority']),
+                self.baseline.to_one_hot(bug['product'], self.baseline.info_dict['product']),
+                self.baseline.to_one_hot(bug['version'], self.baseline.info_dict['version']))
+            )
+        else:
+            info = np.concatenate((
+                self.baseline.to_one_hot(bug['bug_status'], self.baseline.info_dict['bug_status']),
+                self.baseline.to_one_hot(bug['component'], self.baseline.info_dict['component']),
+                self.baseline.to_one_hot(bug['priority'], self.baseline.info_dict['priority']),
+                self.baseline.to_one_hot(bug['version'], self.baseline.info_dict['version']))
+            )
         return info
 
     def run(self, path, dataset, path_buckets, path_train, path_test):

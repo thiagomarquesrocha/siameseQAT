@@ -289,8 +289,9 @@ class Preprocess:
     print("Total:", df.shape[0])
     res = self.paralelize_processing(df, self.processing_normalized_data, (self.normalize_text, ))
     for result in res:
-      products = products.union(result[0])
-      bug_severities = bug_severities.union(result[1])
+      if self.BASE != 'firefox':
+        products = products.union(result[0])
+        bug_severities = bug_severities.union(result[1])
       priorities = priorities.union(result[2])
       versions = versions.union(result[3])
       components = components.union(result[4])
@@ -303,8 +304,9 @@ class Preprocess:
       for row in tqdm(normalized_bugs_json):
         f.write(row)
     
-    self.save_dict(products, os.path.join(self.DIR, 'product.dic'))
-    self.save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
+    if self.BASE != 'firefox':
+        self.save_dict(products, os.path.join(self.DIR, 'product.dic'))
+        self.save_dict(bug_severities, os.path.join(self.DIR, 'bug_severity.dic'))
     self.save_dict(priorities, os.path.join(self.DIR, 'priority.dic'))
     self.save_dict(versions, os.path.join(self.DIR, 'version.dic'))
     self.save_dict(components, os.path.join(self.DIR, 'component.dic'))
@@ -323,8 +325,9 @@ class Preprocess:
     with tqdm(total=df.shape[0]) as loop:
       for row in df.iterrows():
           bug = row[1]
-          products.add(bug['product'])
-          bug_severities.add(bug['bug_severity'])
+          if self.BASE != 'firefox':
+            products.add(bug['product'])
+            bug_severities.add(bug['bug_severity'])
           priorities.add(bug['priority'])
           versions.add(bug['version'])
           components.add(bug['component'])
@@ -348,6 +351,7 @@ class Preprocess:
           text.append(bug['description_bert'])
           text.append(bug['title_bert'])
           loop.update(1)
+
     return [products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json]
 
   def build_vocabulary(self, train_text, MAX_NB_WORDS):
@@ -387,8 +391,9 @@ class Preprocess:
           os.mkdir(bug_dir)
       bugs = []
       print("Reading the normalized_bugs.json ...")
-      product_dict = self.load_dict(os.path.join(self.DIR,'product.dic'))
-      bug_severity_dict = self.load_dict(os.path.join(self.DIR,'bug_severity.dic'))
+      if self.BASE != 'firefox':
+        product_dict = self.load_dict(os.path.join(self.DIR,'product.dic'))
+        bug_severity_dict = self.load_dict(os.path.join(self.DIR,'bug_severity.dic'))
       priority_dict = self.load_dict(os.path.join(self.DIR,'priority.dic'))
       version_dict = self.load_dict(os.path.join(self.DIR,'version.dic'))
       component_dict = self.load_dict(os.path.join(self.DIR,'component.dic'))
@@ -399,8 +404,9 @@ class Preprocess:
           with tqdm(total=total) as loop:
               for line in f:
                   bug = json.loads(line)
-                  bug['product'] = product_dict[bug['product']]
-                  bug['bug_severity'] = bug_severity_dict[bug['bug_severity']]
+                  if self.BASE != 'firefox':
+                    bug['product'] = product_dict[bug['product']]
+                    bug['bug_severity'] = bug_severity_dict[bug['bug_severity']]
                   bug['priority'] = priority_dict[bug['priority']]
                   bug['version'] = version_dict[bug['version']]
                   bug['component'] = component_dict[bug['component']]
@@ -555,16 +561,21 @@ class Preprocess:
 
       normalized = os.path.join('{}data/normalized'.format(self.COLAB), self.DATASET)
 
+      self.BASE = self.DOMAIN
       self.DIR = bug_dir
       self.DOMAIN = os.path.join(normalized, self.DOMAIN)
       self.PAIRS = os.path.join(normalized, self.PAIRS)
       
       # Train
       df_train = pd.read_csv('{}.csv'.format(self.DOMAIN))
-      df_train.columns = ['issue_id','bug_severity','bug_status','component',
-                          'creation_ts','delta_ts','description','dup_id','priority',
-                          'product','resolution','title','version']
-
+      if self.BASE != 'firefox':
+        df_train.columns = ['issue_id','bug_severity','bug_status','component',
+                            'creation_ts','delta_ts','description','dup_id','priority',
+                            'product','resolution','title','version']
+      else:
+        df_train.columns = ['issue_id','priority','component','dup_id','title',
+                                'description','bug_status','resolution','version',
+                                    'creation_ts', 'delta_ts']
       ### Pairs
       #df_train_pair = pd.read_csv('{}.csv'.format(self.PAIRS))
 
@@ -626,6 +637,11 @@ def main():
         'DATASET' : 'openoffice',
         'DOMAIN' : 'openoffice',
         'PAIRS' : 'openoffice_pairs'
+      },
+      'firefox' : {
+          'DATASET' : 'firefox',
+          'DOMAIN' : 'firefox',
+          'PAIRS' : 'firefox_pairs'
       }
     }
 

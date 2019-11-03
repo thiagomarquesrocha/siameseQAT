@@ -640,6 +640,11 @@ def main():
         'DATASET' : 'openoffice',
         'DOMAIN' : 'openoffice',
         'PAIRS' : 'openoffice_pairs'
+      },
+      'firefox' : {
+          'DATASET' : 'firefox',
+          'DOMAIN' : 'firefox',
+          'PAIRS' : 'firefox_pairs'
       }
     }
 

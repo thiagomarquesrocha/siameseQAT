@@ -28,7 +28,7 @@ from annoy import AnnoyIndex
 
 class Baseline:
 
-    def __init__(self, DIR, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    def __init__(self, DOMAIN, DIR, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
         self.sentence_dict = {}
         self.corpus = []
         self.bug_ids = []
@@ -39,6 +39,7 @@ class Baseline:
         self.dup_sets_test = None
         self.bug_set = {}
 
+        self.DOMAIN = DOMAIN
         self.DIR = DIR
         self.GLOVE_DIR = ""
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
@@ -49,14 +50,22 @@ class Baseline:
         if dataset is None: return
         # self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
         df = pd.read_csv(dataset)
-        self.info_dict = {
-            'bug_severity' : df['bug_severity'].unique().shape[0],
-            'bug_status' : df['bug_status'].unique().shape[0],
-            'component' : df['component'].unique().shape[0],
-            'priority' : df['priority'].unique().shape[0],
-            'product' : df['product'].unique().shape[0],
-            'version' : df['version'].unique().shape[0]
-        }
+        if self.DOMAIN != 'firefox':
+            self.info_dict = {
+                'bug_severity' : df['bug_severity'].unique().shape[0],
+                'product' : df['product'].unique().shape[0],
+                'bug_status' : df['bug_status'].unique().shape[0],
+                'component' : df['component'].unique().shape[0],
+                'priority' : df['priority'].unique().shape[0],
+                'version' : df['version'].unique().shape[0]
+            }
+        else:
+            self.info_dict = {
+                'bug_status' : df['bug_status'].unique().shape[0],
+                'component' : df['component'].unique().shape[0],
+                'priority' : df['priority'].unique().shape[0],
+                'version' : df['version'].unique().shape[0]
+            }
 
     def load_ids(self, DIR):
         self.bug_ids = self.read_bug_ids(DIR)
@@ -349,18 +358,29 @@ class Baseline:
         return padded_data.astype(np.int)
 
     def read_batch_bugs(self, batch, bug):
-        info = np.concatenate((
-            self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
-            self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
-            self.to_one_hot(bug['component'], self.info_dict['component']),
-            self.to_one_hot(bug['priority'], self.info_dict['priority']),
-            self.to_one_hot(bug['product'], self.info_dict['product']),
-            self.to_one_hot(bug['version'], self.info_dict['version']))
-        )
+        if self.DOMAIN != 'firefox':
+            info = np.concatenate((
+                self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
+                self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
+                self.to_one_hot(bug['component'], self.info_dict['component']),
+                self.to_one_hot(bug['priority'], self.info_dict['priority']),
+                self.to_one_hot(bug['product'], self.info_dict['product']),
+                self.to_one_hot(bug['version'], self.info_dict['version']))
+            )
+        else:
+            info = np.concatenate((
+                self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
+                self.to_one_hot(bug['component'], self.info_dict['component']),
+                self.to_one_hot(bug['priority'], self.info_dict['priority']),
+                self.to_one_hot(bug['version'], self.info_dict['version']))
+            )
         #info.append(info_)
         batch['info'].append(info)
         batch['title'].append(bug['title_word'])
         batch['desc'].append(bug['description_word'])
+
+    def read_batch_bugs_centroid(self, batch, bug):
+        batch['centroid_embed'].append(bug['centroid_embed'])
 
     def get_neg_bug_semihard(self, retrieval, model, batch_bugs, anchor, invalid_bugs, method='keras'):
         if method == 'keras':

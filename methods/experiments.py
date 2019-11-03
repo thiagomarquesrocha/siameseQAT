@@ -36,14 +36,8 @@ class Experiment:
             info_data.append(retrieval.get_info(bug))
         embeds = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
         kmeans = KMeans(n_clusters=1, random_state=0).fit(embeds)
-        centroid = kmeans.cluster_centers_[0]
-        annoy = AnnoyIndex(centroid.shape[0])
-        for bug_id, embed in zip(dups, embeds):
-            annoy.add_item(bug_id, embed)
-        annoy.build(10) # 10 trees
-        rank = annoy.get_nns_by_vector(centroid, 1, include_distances=False)
-        master = rank[0]
-        return baseline.bug_set[master]
+        master_centroid = kmeans.cluster_centers_.tolist()[0]
+        return { 'centroid_embed' : master_centroid }
     def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
                                 n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False):
         baseline = self.baseline
@@ -58,8 +52,8 @@ class Experiment:
         batch_input, batch_pos, batch_neg, master_batch_input, master_batch_neg = {'title' : [], 'desc' : [], 'info' : []}, \
                                                 {'title' : [], 'desc' : [], 'info' : []}, \
                                                     {'title' : [], 'desc' : [], 'info' : []},\
-                                                        {'title' : [], 'desc' : [], 'info' : []}, \
-                                                            {'title' : [], 'desc' : [], 'info' : []}
+                                                        {'title' : [], 'desc' : [], 'info' : [], 'centroid_embed': []}, \
+                                                            {'title' : [], 'desc' : [], 'info' : [], 'centroid_embed': []}
 
         n_train = len(data)
         all_bugs = list(issues_by_buckets.keys())
@@ -104,9 +98,14 @@ class Experiment:
             baseline.read_batch_bugs(batch_pos, bug_pos)
             baseline.read_batch_bugs(batch_neg, bug_neg)
             # master anchor and neg
-            if INCLUDE_MASTER or USE_CENTROID:
+            if INCLUDE_MASTER:
                 baseline.read_batch_bugs(master_batch_input, master_anchor)
                 baseline.read_batch_bugs(master_batch_neg, master_neg)
+                # quintet for bugs and masters
+                batch_triplets.append([anchor, pos, neg, master_anchor, master_neg])
+            elif USE_CENTROID:
+                baseline.read_batch_bugs_centroid(master_batch_input, master_anchor)
+                baseline.read_batch_bugs_centroid(master_batch_neg, master_neg)
                 # quintet for bugs and masters
                 batch_triplets.append([anchor, pos, neg, master_anchor, master_neg])
             else: # triplet for bugs
@@ -126,7 +125,7 @@ class Experiment:
         batch_neg['info'] = np.array(batch_neg['info'])
         
         # master
-        if INCLUDE_MASTER or USE_CENTROID:
+        if INCLUDE_MASTER:
             master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_ids }
             master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_ids }
             master_batch_input['info'] = np.array(master_batch_input['info'])
@@ -134,6 +133,9 @@ class Experiment:
             master_batch_neg['title'] = { 'token' : np.array(master_batch_neg['title']), 'segment' : title_ids }
             master_batch_neg['desc'] = { 'token' : np.array(master_batch_neg['desc']), 'segment' : description_ids }
             master_batch_neg['info'] = np.array(master_batch_neg['info'])
+        elif USE_CENTROID:
+            master_batch_input['centroid_embed'] = np.array(master_batch_input['centroid_embed'])
+            master_batch_neg['centroid_embed'] = np.array(master_batch_neg['centroid_embed'])
 
         n_half = len(batch_triplets) // 2
         if n_half > 0:
@@ -143,18 +145,22 @@ class Experiment:
         else:
             sim = np.array([np.random.choice([1, 0])])
 
-        input_sample, input_pos, input_neg, master_input_sample, master_neg = {}, {}, {}, {}, {}
+        input_sample, input_pos, input_neg, master_input_sample, master_neg_sample = {}, {}, {}, {}, {}
 
         input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'], 'info' : batch_input['info'] }
         input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
         input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
         # master
-        if INCLUDE_MASTER or USE_CENTROID: 
+        if INCLUDE_MASTER: 
             master_input_sample = { 'title' : master_batch_input['title'], 'description' : master_batch_input['desc'], 
                                 'info' : master_batch_input['info'] }
-            master_neg = { 'title' : master_batch_neg['title'], 'description' : master_batch_neg['desc'], 
+            master_neg_sample = { 'title' : master_batch_neg['title'], 'description' : master_batch_neg['desc'], 
                                 'info' : master_batch_neg['info'] }
-            return batch_triplets, input_sample, input_pos, input_neg, master_input_sample, master_neg, sim #sim
+            return batch_triplets, input_sample, input_pos, input_neg, master_input_sample, master_neg_sample, sim #sim
+        elif USE_CENTROID:
+            master_input_sample = { 'centroid_embed': master_batch_input['centroid_embed'] }
+            master_neg_sample = { 'centroid_embed' : master_batch_neg['centroid_embed'] }
+            return batch_triplets, input_sample, input_pos, input_neg, master_input_sample, master_neg_sample, sim #sim
         else:
             return batch_triplets, input_sample, input_pos, input_neg, sim #sim
 
@@ -252,7 +258,7 @@ class Experiment:
         return formated_rank
 
     ## Vectorizer the test
-    def vectorizer_test(self, bug_set, model, test, issues_by_buckets, method='keras', verbose=1):
+    def vectorizer_test(self, bug_set, model, test, issues_by_buckets, method='keras', verbose=1, only_buckets=False):
         test_vectorized = []
         title_data, desc_data, info_data, title_desc_data = [], [], [], []
         loop = test
@@ -263,9 +269,15 @@ class Experiment:
         tests = set()
         for row in loop: # retrieval.bugs_train
             query, ground_truth = row
-            bugs = self.retrieval.buckets[issues_by_buckets[query]]
-            for bug_id in bugs:
-                tests.add(bug_id)
+            if only_buckets: # only add buckets
+                bugs = [query]
+                bugs += ground_truth
+                for bug_id in bugs: 
+                    tests.add(issues_by_buckets[bug_id])
+            else:
+                bugs = self.retrieval.buckets[issues_by_buckets[query]]
+                for bug_id in bugs:
+                    tests.add(bug_id)
 
         for bug_id in tests:
             bug = bug_set[bug_id]
@@ -302,19 +314,30 @@ class Experiment:
 
         return test_vectorized
 
-    def vectorize_queries(self, bug_set, model, test, issues_by_buckets, bug_train_ids, method='keras', verbose=1):
+    def vectorize_queries(self, bug_set, model, test, issues_by_buckets, bug_train_ids, method='keras', verbose=1, only_buckets=False):
         queries_test_vectorized = []
         title_data, desc_data, info_data, title_desc_data = [], [], [], []
         
         # Transform all duplicates in queries
-        queries = []
+        queries = set()
         for row in test:
             test_bug_id, ground_truth = row
-            if test_bug_id not in bug_train_ids:
-                queries.append(test_bug_id)
-            for bug_id in ground_truth:
-                if bug_id not in bug_train_ids:
-                    queries.append(bug_id)
+            if only_buckets:
+                if issues_by_buckets[test_bug_id] == test_bug_id: # if the bug is the master
+                    test_bug_id = np.random.choice(ground_truth, 1)[0]
+                queries.add(test_bug_id)
+                if test_bug_id in ground_truth:
+                    ground_truth = list(set(ground_truth) - set([test_bug_id])) # Remove the same bug random choice to change the master
+                if len(ground_truth) > 0:
+                    for bug in ground_truth:
+                        if issues_by_buckets[bug] != bug: # if the bug is the master
+                            queries.add(bug)
+            else:
+                if test_bug_id not in bug_train_ids:
+                    queries.add(test_bug_id)
+                for bug_id in ground_truth:
+                    if bug_id not in bug_train_ids:
+                        queries.add(bug_id)
         
         loop = queries
         if(verbose):
@@ -322,8 +345,11 @@ class Experiment:
         
         for test_bug_id in loop:
             
-            ground_truth_fix = list(self.retrieval.buckets[issues_by_buckets[test_bug_id]])
-            ground_truth_fix.remove(test_bug_id)
+            if only_buckets:
+                ground_truth_fix = [issues_by_buckets[test_bug_id]]
+            else:
+                ground_truth_fix = list(self.retrieval.buckets[issues_by_buckets[test_bug_id]])
+                ground_truth_fix.remove(test_bug_id)
 
             bug = bug_set[test_bug_id]
             if method == 'keras':
@@ -384,7 +410,7 @@ class Experiment:
         if(verbose): loop.close()
         return exported_rank
     
-    def evaluate_validation_test(self, retrieval, verbose, loaded_model, issues_by_buckets, bug_train_ids, method='keras'):
+    def evaluate_validation_test(self, retrieval, verbose, loaded_model, issues_by_buckets, bug_train_ids, method='keras', only_buckets=False):
         # Load test set
         test = self.retrieval.test
         bug_set = self.retrieval.baseline.get_bug_set()
@@ -393,8 +419,8 @@ class Experiment:
         model = self.get_model_vectorizer(loaded_model=loaded_model)
         
         # Test 
-        test_vectorized = self.vectorizer_test(bug_set, model, test, issues_by_buckets, method, verbose)
-        queries_test_vectorized = self.vectorize_queries(bug_set, model, test, issues_by_buckets, bug_train_ids, method, verbose)
+        test_vectorized = self.vectorizer_test(bug_set, model, test, issues_by_buckets, method, verbose, only_buckets=only_buckets)
+        queries_test_vectorized = self.vectorize_queries(bug_set, model, test, issues_by_buckets, bug_train_ids, method, verbose, only_buckets=only_buckets)
         annoy = self.indexing_test(test_vectorized, verbose)
         X_test, distance_test, indices_test = self.indexing_query(annoy, queries_test_vectorized, verbose)
         formated_rank = self.rank_result(X_test, test_vectorized, indices_test, distance_test, verbose)
