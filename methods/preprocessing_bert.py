@@ -182,7 +182,7 @@ class Preprocess:
     return bug_pairs, bug_ids
 
   def split_train_test(self, bug_pairs, VALIDATION_SPLIT):
-    #random.shuffle(bug_pairs)
+    random.shuffle(bug_pairs)
     split_idx = int(len(bug_pairs) * VALIDATION_SPLIT)
     with open(os.path.join(self.DIR, '{}.txt'.format(self.TRAIN_PATH)), 'w') as f:
       for pair in bug_pairs[:split_idx]:
@@ -260,6 +260,28 @@ class Preprocess:
     return text
 
   def normalize_text(self, text):
+    # text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', str(text)) # [0-9] min
+    # # Extension files
+    # #text = re.sub(r'(WAR|zip|ZIP|css)', 'extension file', text) # extension file
+    # #text = re.sub(r'.(zip|txt|java|js|html|php|pdf|exe|doc|jar|xml)', ' extension file', text) # extension file
+    # # Memory 
+    # text = re.sub(r'kB', 'kb', text)
+    # # Keyboards
+    # text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
+    # # Contraction
+    # text=self.expand_contractions(text, contractions_dict)
+
+    # # NER processing
+    # text = text[:100000] # limit of spacy lib
+    # text = self.ner(text)
+
+    # tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
+    # text = ' '.join([self.func_name_tokenize(token) for token in tokens])
+    # #     text = ' '.join(tokens)
+    
+    # text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
+    # text = [word.lower() for word in nltk.word_tokenize(text)]
+    # text = ' '.join([word for word in text]).encode('utf-8')
     text = " ".join(self.tokenizer.tokenize(str(text)))
     return text
 

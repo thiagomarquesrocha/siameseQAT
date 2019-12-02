@@ -72,6 +72,7 @@ class Experiment:
         kmeans = KMeans(n_clusters=1, random_state=0).fit(embeds)
         master_centroid = kmeans.cluster_centers_.tolist()[0]
         return { 'centroid_embed' : master_centroid }
+    
     def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
                                 n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False):
         baseline = self.baseline
@@ -91,6 +92,7 @@ class Experiment:
 
         n_train = len(data)
         all_bugs = list(issues_by_buckets.keys())
+        buckets = retrieval.buckets
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, \
             batch_bugs_neg, batch_dups, batch_bugs = [], [], [], [], [], []
 
@@ -105,9 +107,9 @@ class Experiment:
         for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
             while True:
                 if model == None:
-                    neg = baseline.get_neg_bug(anchor, dup_sets[anchor], issues_by_buckets, all_bugs)
+                    neg = baseline.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
-                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_dups, anchor, dup_sets[anchor], method='bert')
+                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_dups, anchor, buckets[issues_by_buckets[anchor]], method='bert')
 
                 if neg not in baseline.bug_set \
                     or ((INCLUDE_MASTER or USE_CENTROID) and issues_by_buckets[neg] not in baseline.bug_set):
@@ -115,7 +117,21 @@ class Experiment:
                 batch_bugs.append(neg)
                 batch_bugs_neg.append(neg)
                 break
-        for anchor, pos, neg in zip(batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg):
+        
+        # Mask to BERT
+        title_anchor_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_anchor_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        title_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        title_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        if INCLUDE_MASTER:
+            title_master_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+            description_master_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+            title_master_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
+            description_master_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+
+        for (i, anchor), pos, neg in zip(enumerate(batch_bugs_anchor), batch_bugs_pos, batch_bugs_neg):
             bug_anchor = baseline.bug_set[anchor]
             bug_pos = baseline.bug_set[pos]
             bug_neg = baseline.bug_set[neg]
@@ -128,13 +144,19 @@ class Experiment:
                 master_anchor = self.get_centroid(retrieval.buckets[issues_by_buckets[anchor]], model)
                 master_neg = self.get_centroid(retrieval.buckets[issues_by_buckets[neg]], model)
             
-            baseline.read_batch_bugs(batch_input, bug_anchor)
-            baseline.read_batch_bugs(batch_pos, bug_pos)
-            baseline.read_batch_bugs(batch_neg, bug_neg)
+            baseline.read_batch_bugs(batch_input, bug_anchor, i, title_anchor_ids, description_anchor_ids)
+            baseline.read_batch_bugs(batch_pos, bug_pos, i, title_pos_ids, description_pos_ids)
+            baseline.read_batch_bugs(batch_neg, bug_neg, i, title_neg_ids, description_neg_ids)
+
+            # check padding of desc field
+            self.baseline.apply_window_padding(bug_anchor, bug_pos)
+            self.baseline.apply_window_padding(bug_anchor, bug_neg)
+            self.baseline.apply_window_padding(bug_pos, bug_neg)
+
             # master anchor and neg
             if INCLUDE_MASTER:
-                baseline.read_batch_bugs(master_batch_input, master_anchor)
-                baseline.read_batch_bugs(master_batch_neg, master_neg)
+                baseline.read_batch_bugs(master_batch_input, master_anchor, i, title_master_pos_ids, description_master_pos_ids)
+                baseline.read_batch_bugs(master_batch_neg, master_neg, i, title_master_neg_ids, description_master_neg_ids)
                 # quintet for bugs and masters
                 batch_triplets.append([anchor, pos, neg, master_anchor, master_neg])
             elif USE_CENTROID:
@@ -144,28 +166,25 @@ class Experiment:
                 batch_triplets.append([anchor, pos, neg, master_anchor, master_neg])
             else: # triplet for bugs
                 batch_triplets.append([anchor, pos, neg])
-            
-        title_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-        description_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
 
-        batch_input['title'] = { 'token' : np.array(batch_input['title']), 'segment' : title_ids }
-        batch_input['desc'] = { 'token' : np.array(batch_input['desc']), 'segment' : description_ids }
+        batch_input['title'] = { 'token' : np.array(batch_input['title']), 'segment' : title_anchor_ids }
+        batch_input['desc'] = { 'token' : np.array(batch_input['desc']), 'segment' : description_anchor_ids }
         batch_input['info'] = np.array(batch_input['info'])
-        batch_pos['title'] = { 'token' : np.array(batch_pos['title']), 'segment' : title_ids }
-        batch_pos['desc'] = { 'token' : np.array(batch_pos['desc']), 'segment' : description_ids }
+        batch_pos['title'] = { 'token' : np.array(batch_pos['title']), 'segment' : title_pos_ids }
+        batch_pos['desc'] = { 'token' : np.array(batch_pos['desc']), 'segment' : description_pos_ids }
         batch_pos['info'] = np.array(batch_pos['info'])
-        batch_neg['title'] = { 'token' : np.array(batch_neg['title']), 'segment' : title_ids }
-        batch_neg['desc'] = { 'token' : np.array(batch_neg['desc']), 'segment' : description_ids }
+        batch_neg['title'] = { 'token' : np.array(batch_neg['title']), 'segment' : title_neg_ids }
+        batch_neg['desc'] = { 'token' : np.array(batch_neg['desc']), 'segment' : description_neg_ids }
         batch_neg['info'] = np.array(batch_neg['info'])
         
         # master
         if INCLUDE_MASTER:
-            master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_ids }
-            master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_ids }
+            master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_master_pos_ids }
+            master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_master_pos_ids }
             master_batch_input['info'] = np.array(master_batch_input['info'])
             
-            master_batch_neg['title'] = { 'token' : np.array(master_batch_neg['title']), 'segment' : title_ids }
-            master_batch_neg['desc'] = { 'token' : np.array(master_batch_neg['desc']), 'segment' : description_ids }
+            master_batch_neg['title'] = { 'token' : np.array(master_batch_neg['title']), 'segment' : title_master_neg_ids }
+            master_batch_neg['desc'] = { 'token' : np.array(master_batch_neg['desc']), 'segment' : description_master_neg_ids }
             master_batch_neg['info'] = np.array(master_batch_neg['info'])
         elif USE_CENTROID:
             master_batch_input['centroid_embed'] = np.array(master_batch_input['centroid_embed'])
@@ -314,6 +333,8 @@ class Experiment:
                     tests.add(bug_id)
 
         for bug_id in tests:
+            if bug_id not in bug_set: # Firefox does not exit bug 131106
+                continue
             bug = bug_set[bug_id]
             if method == 'keras':
                 title_data.append(bug['title_word'])
@@ -384,7 +405,9 @@ class Experiment:
             else:
                 ground_truth_fix = list(self.retrieval.buckets[issues_by_buckets[test_bug_id]])
                 ground_truth_fix.remove(test_bug_id)
-
+            
+            if test_bug_id not in bug_set: # Firefox does not exit bug 131106
+                continue
             bug = bug_set[test_bug_id]
             if method == 'keras':
                 title_data.append(bug['title_word'])
@@ -503,7 +526,7 @@ class Experiment:
                     Some bugs duplicates point to one master that
                     does not exist in the dataset like openoffice master=152778
                 '''
-                bugs = [bug for bug in bugs if int(bug) in bug_set and int(bug) not in bug_train_ids]
+                bugs = [bug for bug in bugs if int(bug) in bug_set] # and int(bug) not in bug_train_ids
                 if len(bugs) < 2:
                     continue
                 query = int(bugs[0])

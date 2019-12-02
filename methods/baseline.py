@@ -28,7 +28,8 @@ from annoy import AnnoyIndex
 
 class Baseline:
 
-    def __init__(self, DOMAIN, DIR, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):
+    def __init__(self, DOMAIN, DIR, dataset, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D,
+        TOKEN_BEGIN, TOKEN_END):
         self.sentence_dict = {}
         self.corpus = []
         self.bug_ids = []
@@ -44,6 +45,8 @@ class Baseline:
         self.GLOVE_DIR = ""
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
+        self.TOKEN_BEGIN = TOKEN_BEGIN
+        self.TOKEN_END = TOKEN_END
         self.get_info_dict(dataset)
 
     def get_info_dict(self, dataset):
@@ -345,19 +348,22 @@ class Baseline:
         one_hot[int(float(idx))] = 1
         return one_hot
 
-    @staticmethod
-    def data_padding(data, max_seq_length):
+    def data_padding(self, data, max_seq_length):
         seq_lengths = [len(seq) for seq in data]
         seq_lengths.append(6)
         #max_seq_length = min(max(seq_lengths), max_seq_length)
         padded_data = np.zeros(shape=[len(data), max_seq_length])
         for i, seq in enumerate(data):
             seq = seq[:max_seq_length]
+            end_sent = -1
             for j, token in enumerate(seq):
+                if(int(token) == self.TOKEN_END):
+                    token = 0
                 padded_data[i, j] = int(token)
+            padded_data[i] = np.concatenate([padded_data[i][:-1], [self.TOKEN_END]])
         return padded_data.astype(np.int)
 
-    def read_batch_bugs(self, batch, bug):
+    def read_batch_bugs(self, batch, bug, index=-1, title_ids=None, description_ids=None):
         if self.DOMAIN != 'firefox':
             info = np.concatenate((
                 self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
@@ -378,6 +384,9 @@ class Baseline:
         batch['info'].append(info)
         batch['title'].append(bug['title_word'])
         batch['desc'].append(bug['description_word'])
+        if(title_ids and description_ids):
+            title_ids[index] = [int(v > 0) for v in bug['title_word']]
+            description_ids[index] = [int(v > 0) for v in bug['description_word']]
 
     def read_batch_bugs_centroid(self, batch, bug):
         batch['centroid_embed'].append(bug['centroid_embed'])
@@ -411,7 +420,29 @@ class Baseline:
         annoy.build(10) # 10 trees
         rank = annoy.get_nns_by_vector(vector[0], 20, include_distances=False)
         neg_bug = rank[0]
+        if neg_bug == anchor:
+            neg_bug = rank[1]
         return neg_bug
+
+    def fill_padding(self, bug, window_padding, pad_desc):
+        vector_padding = bug['description_word_bert'][window_padding:window_padding+pad_desc]
+        if(len(vector_padding) != pad_desc):
+            return
+        bug['description_word'] = np.concatenate([[self.TOKEN_BEGIN], vector_padding[1:-1], [self.TOKEN_END]])
+
+    def apply_window_padding(self, bug_anchor, bug_neg):
+        pad_title = self.MAX_SEQUENCE_LENGTH_T
+        pad_desc = self.MAX_SEQUENCE_LENGTH_D
+        iteration = 1
+        while np.array_equal(bug_anchor['description_word'], bug_neg['description_word']) and pad_desc * iteration < len(bug_neg['description_word_bert']):
+            size_content = len(bug_neg['description_word_bert']) - pad_desc * iteration
+            if(size_content >= pad_desc):
+                window_padding = pad_desc * iteration
+                self.fill_padding(bug_neg, window_padding, pad_desc)
+            elif(size_content > 0):
+                window_padding = pad_desc * iteration + size_content
+                self.fill_padding(bug_neg, window_padding, pad_desc)
+            iteration+=1
 
     # data - path
     # batch_size - 128
@@ -433,6 +464,7 @@ class Baseline:
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg, batch_bugs = [], [], [], [], []
 
         all_bugs = list(issues_by_buckets.keys())
+        buckets = retrieval.buckets
 
         for offset in range(batch_size):
             anchor, pos = data[offset][0], data[offset][1]
@@ -443,9 +475,9 @@ class Baseline:
         for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
             while True:
                 if model == None:
-                    neg = self.get_neg_bug(anchor, dup_sets[anchor], issues_by_buckets, all_bugs)
+                    neg = self.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
-                    neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, dup_sets[anchor])
+                    neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, buckets[issues_by_buckets[anchor]])
                 bug_anchor = self.bug_set[anchor]
                 bug_pos = self.bug_set[pos]
                 if neg not in self.bug_set:
@@ -456,6 +488,12 @@ class Baseline:
             self.read_batch_bugs(batch_input, bug_anchor)
             self.read_batch_bugs(batch_pos, bug_pos)
             self.read_batch_bugs(batch_neg, bug_neg)
+
+            # check padding of desc field
+            self.apply_window_padding(bug_anchor, bug_pos)
+            self.apply_window_padding(bug_anchor, bug_neg)
+            self.apply_window_padding(bug_pos, bug_neg)
+
             # triplet bug and master
             batch_triplets.append([anchor, pos, neg])
 
