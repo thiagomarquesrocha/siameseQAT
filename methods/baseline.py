@@ -384,7 +384,7 @@ class Baseline:
         batch['info'].append(info)
         batch['title'].append(bug['title_word'])
         batch['desc'].append(bug['description_word'])
-        if(title_ids and description_ids):
+        if(index != -1):
             title_ids[index] = [int(v > 0) for v in bug['title_word']]
             description_ids[index] = [int(v > 0) for v in bug['description_word']]
 
@@ -447,7 +447,8 @@ class Baseline:
     # data - path
     # batch_size - 128
     # n_neg - 1
-    def batch_iterator(self, retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
+    def batch_iterator(self, retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets,
+    TRIPLET_HARD=False, FLOATING_PADDING=False):
         # global train_data
         # global self.dup_sets
         # global self.bug_ids
@@ -470,11 +471,13 @@ class Baseline:
             anchor, pos = data[offset][0], data[offset][1]
             batch_bugs_anchor.append(anchor)
             batch_bugs_pos.append(pos)
-            batch_bugs += dup_sets[anchor]
+            batch_bugs.append(anchor)
+            batch_bugs.append(pos)
+            #batch_bugs += dup_sets[anchor]
         
         for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
             while True:
-                if model == None:
+                if not TRIPLET_HARD:
                     neg = self.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
                     neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, buckets[issues_by_buckets[anchor]])
@@ -482,6 +485,7 @@ class Baseline:
                 bug_pos = self.bug_set[pos]
                 if neg not in self.bug_set:
                     continue
+                batch_bugs.append(neg)
                 bug_neg = self.bug_set[neg]
                 break
             
@@ -490,9 +494,10 @@ class Baseline:
             self.read_batch_bugs(batch_neg, bug_neg)
 
             # check padding of desc field
-            self.apply_window_padding(bug_anchor, bug_pos)
-            self.apply_window_padding(bug_anchor, bug_neg)
-            self.apply_window_padding(bug_pos, bug_neg)
+            if(FLOATING_PADDING):
+                self.apply_window_padding(bug_anchor, bug_pos)
+                self.apply_window_padding(bug_anchor, bug_neg)
+                self.apply_window_padding(bug_pos, bug_neg)
 
             # triplet bug and master
             batch_triplets.append([anchor, pos, neg])

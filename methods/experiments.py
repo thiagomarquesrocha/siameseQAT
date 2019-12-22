@@ -23,8 +23,8 @@ class Experiment:
     def load_bugs(self):
         self.baseline.load_bugs()
 
-    def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets):
-        return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets)
+    def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=False, FLOATING_PADDING=False):
+        return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=TRIPLET_HARD, FLOATING_PADDING=FLOATING_PADDING)
 
     def batch_classification_test(self, path):
         encoder = LabelEncoder()
@@ -74,7 +74,8 @@ class Experiment:
         return { 'centroid_embed' : master_centroid }
     
     def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
-                                n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False):
+                                n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False,
+                                TRIPLET_HARD=False, FLOATING_PADDING=False):
         baseline = self.baseline
         retrieval = self.retrieval
         # global train_data
@@ -94,22 +95,21 @@ class Experiment:
         all_bugs = list(issues_by_buckets.keys())
         buckets = retrieval.buckets
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, \
-            batch_bugs_neg, batch_dups, batch_bugs = [], [], [], [], [], []
+            batch_bugs_neg, batch_bugs = [], [], [], [], []
 
         for offset in range(batch_size):
             anchor, pos = data[offset][0], data[offset][1]
             batch_bugs_anchor.append(anchor)
             batch_bugs_pos.append(pos)
-            batch_dups += dup_sets[anchor]
             batch_bugs.append(anchor)
             batch_bugs.append(pos)
         
         for anchor, pos in zip(batch_bugs_anchor, batch_bugs_pos):
             while True:
-                if model == None:
+                if not TRIPLET_HARD:
                     neg = baseline.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
-                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_dups, anchor, buckets[issues_by_buckets[anchor]], method='bert')
+                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_bugs, anchor, buckets[issues_by_buckets[anchor]], method='bert')
 
                 if neg not in baseline.bug_set \
                     or ((INCLUDE_MASTER or USE_CENTROID) and issues_by_buckets[neg] not in baseline.bug_set):
@@ -119,17 +119,17 @@ class Experiment:
                 break
         
         # Mask to BERT
-        title_anchor_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-        description_anchor_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
-        title_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-        description_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
-        title_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-        description_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        title_anchor_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_anchor_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        title_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
+        title_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
+        description_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
         if INCLUDE_MASTER:
-            title_master_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-            description_master_pos_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
-            title_master_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_T), 0)
-            description_master_neg_ids = np.full((len(batch_triplets), baseline.MAX_SEQUENCE_LENGTH_D), 0)
+            title_master_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
+            description_master_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
+            title_master_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
+            description_master_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
 
         for (i, anchor), pos, neg in zip(enumerate(batch_bugs_anchor), batch_bugs_pos, batch_bugs_neg):
             bug_anchor = baseline.bug_set[anchor]
@@ -149,9 +149,10 @@ class Experiment:
             baseline.read_batch_bugs(batch_neg, bug_neg, i, title_neg_ids, description_neg_ids)
 
             # check padding of desc field
-            self.baseline.apply_window_padding(bug_anchor, bug_pos)
-            self.baseline.apply_window_padding(bug_anchor, bug_neg)
-            self.baseline.apply_window_padding(bug_pos, bug_neg)
+            if(FLOATING_PADDING):
+                self.baseline.apply_window_padding(bug_anchor, bug_pos)
+                self.baseline.apply_window_padding(bug_anchor, bug_neg)
+                self.baseline.apply_window_padding(bug_pos, bug_neg)
 
             # master anchor and neg
             if INCLUDE_MASTER:
