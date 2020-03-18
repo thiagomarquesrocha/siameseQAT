@@ -14,6 +14,7 @@ if nb_dir not in sys.path:
 # from keras.models import Model
 from sklearn.neighbors import NearestNeighbors
 from operator import itemgetter
+import networkx as nx
 
 class Retrieval():
     def __init__(self):
@@ -23,44 +24,6 @@ class Retrieval():
         self.baseline.load_ids(data)
         self.baseline.prepare_dataset()
         self.baseline.load_bugs()
-
-    def create_bucket(self, df):
-        print("Creating the buckets...")
-        buckets = {}
-        # Reading the buckets
-        df_buckets = df[df['dup_id'] == '[]']
-        loop = tqdm(total=df_buckets.shape[0])
-        for row in df_buckets.iterrows():
-            name = row[1]['bug_id']
-            buckets[name] = set()
-            buckets[name].add(name)
-            loop.update(1)
-        loop.close()
-        # Fill the buckets
-        df_duplicates = df[df['dup_id'] != '[]']
-        loop = tqdm(total=df_duplicates.shape[0])
-        for row_bug_id, row_dup_id in df_duplicates[['bug_id', 'dup_id']].values:
-            bucket_name = int(row_dup_id)
-            dup_id = row_bug_id
-            while bucket_name not in buckets:
-                query = df_duplicates[df_duplicates['bug_id'] == bucket_name]
-                '''
-                Ex: Netbeans bug 97781 point to 67568 (does not exist)
-                '''
-                if query.shape[0] <= 0: # when the duplicate does not exist
-                    buckets[bucket_name] = set() # set the bucket alone
-                    buckets[bucket_name].add(bucket_name)
-                    break
-                bucket_name = int(query['dup_id'])
-            '''
-                Some bugs duplicates point to one master that
-                does not exist in the dataset like openoffice master=152778
-            '''
-            if bucket_name in buckets:
-                buckets[bucket_name].add(dup_id)
-            loop.update(1)
-        loop.close()
-        self.buckets = buckets
 
     def create_queries(self):
         self.test = self.baseline.test_data

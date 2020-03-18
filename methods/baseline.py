@@ -235,7 +235,7 @@ class Baseline:
 
         Baseline.plot_2d(valid_sim, tsne_features)
 
-    def load_bugs(self):   
+    def load_bugs(self, method):   
         removed = []
         self.corpus = []
         self.sentence_dict = {}
@@ -244,26 +244,26 @@ class Baseline:
         for bug_id in tqdm(self.bug_ids):
             try:
                 bug = pickle.load(open(os.path.join(self.DIR, 'bugs', '{}.pkl'.format(bug_id)), 'rb'))
-                title_padding.append(bug['title_word_bert'][:self.MAX_SEQUENCE_LENGTH_T])
-                desc_padding.append(bug['description_word_bert'][:self.MAX_SEQUENCE_LENGTH_D])
+                title_padding.append(bug['title_token'][:self.MAX_SEQUENCE_LENGTH_T])
+                desc_padding.append(bug['description_token'][:self.MAX_SEQUENCE_LENGTH_D])
                 self.bug_set[bug_id] = bug
                 #break
             except:
                 removed.append(bug_id)
         
         # Padding
-        title_padding = self.data_padding(title_padding, self.MAX_SEQUENCE_LENGTH_T)
-        desc_padding = self.data_padding(desc_padding, self.MAX_SEQUENCE_LENGTH_D)
+        title_padding = self.data_padding(title_padding, self.MAX_SEQUENCE_LENGTH_T, method=method)
+        desc_padding = self.data_padding(desc_padding, self.MAX_SEQUENCE_LENGTH_D, method=method)
         
         for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
             bug = self.bug_set[bug_id]
             self.sentence_dict[",".join(np.array(bug_title, str))] = bug['title']
             self.sentence_dict[",".join(np.array(bug_desc, str))] = bug['description']
-            bug['title'] = bug['title_bert']
-            bug['description'] = bug['description_bert']
-            bug['title_word'] = bug_title
-            bug['description_word'] = bug_desc
-            bug['textual_word'] = np.concatenate([bug_title, bug_desc], -1)
+            bug['title'] = bug['title']
+            bug['description'] = bug['description']
+            bug['title_token'] = bug_title
+            bug['description_token'] = bug_desc
+            bug['textual_token'] = np.concatenate([bug_title, bug_desc], -1)
         
         if len(removed) > 0:
             for x in removed:
@@ -339,16 +339,35 @@ class Baseline:
         # global train_data
         # global dup_sets
         # global bug_ids
-        self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set), path_train)
-        self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets, path_test)
-        self.bug_ids = Baseline.read_bug_ids(self.DIR)
+        try:
+            self.train_data = self.load_object('train_data')
+            self.dup_sets_train = self.load_object('dup_sets_train')
+            self.test_data = self.load_object('test_data')
+            self.dup_sets_test = self.load_object('dup_sets_test')
+            self.bug_ids = self.load_object('bug_ids')
+        except:
+            self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set), path_train)
+            self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets, path_test)
+            self.bug_ids = Baseline.read_bug_ids(self.DIR)
+            self.save_object('train_data', self.train_data)
+            self.save_object('dup_sets_train', self.dup_sets_train)
+            self.save_object('test_data', self.test_data)
+            self.save_object('dup_sets_test', self.dup_sets_test)
+            self.save_object('bug_ids', self.bug_ids)
+
+    def load_object(self, path):
+        with open(os.path.join(self.DIR, '{}.pkl'.format(path)), 'rb') as f:
+            return pickle.load(f)
+    def save_object(self, path, obj):
+        with open(os.path.join(self.DIR, '{}.pkl'.format(path)), 'wb') as f:
+            pickle.dump(obj, f)
 
     def to_one_hot(self, idx, size):
         one_hot = np.zeros(size)
         one_hot[int(float(idx))] = 1
         return one_hot
 
-    def data_padding(self, data, max_seq_length):
+    def data_padding(self, data, max_seq_length, method):
         seq_lengths = [len(seq) for seq in data]
         seq_lengths.append(6)
         #max_seq_length = min(max(seq_lengths), max_seq_length)
@@ -360,7 +379,8 @@ class Baseline:
                 if(int(token) == self.TOKEN_END):
                     token = 0
                 padded_data[i, j] = int(token)
-            padded_data[i] = np.concatenate([padded_data[i][:-1], [self.TOKEN_END]])
+            if method == 'bert':
+                padded_data[i] = np.concatenate([padded_data[i][:-1], [self.TOKEN_END]])
         return padded_data.astype(np.int)
 
     def read_batch_bugs(self, batch, bug, index=-1, title_ids=None, description_ids=None):
@@ -382,34 +402,35 @@ class Baseline:
             )
         #info.append(info_)
         batch['info'].append(info)
-        batch['title'].append(bug['title_word'])
-        batch['desc'].append(bug['description_word'])
+        batch['title'].append(bug['title_token'])
+        batch['desc'].append(bug['description_token'])
         if(index != -1):
-            title_ids[index] = [int(v > 0) for v in bug['title_word']]
-            description_ids[index] = [int(v > 0) for v in bug['description_word']]
+            title_ids[index] = [int(v > 0) for v in bug['title_token']]
+            description_ids[index] = [int(v > 0) for v in bug['description_token']]
 
     def read_batch_bugs_centroid(self, batch, bug):
         batch['centroid_embed'].append(bug['centroid_embed'])
 
-    def get_neg_bug_semihard(self, retrieval, model, batch_bugs, anchor, invalid_bugs, method='keras'):
+    def get_neg_bug_semihard(self, retrieval, model, batch_bugs, anchor, pos, invalid_bugs, method='keras'):
         if method == 'keras':
-            vector = model.predict([ np.array([self.bug_set[anchor]['title_word']]), 
-                                    np.array([self.bug_set[anchor]['description_word']]), 
+            vector = model.predict([ np.array([self.bug_set[anchor]['title_token']]), 
+                                    np.array([self.bug_set[anchor]['description_token']]), 
                                     np.array([retrieval.get_info(self.bug_set[anchor])]) ])
         elif method == 'bert':
-            vector = model.predict([ np.array([self.bug_set[anchor]['title_word']]),
-                                    np.zeros_like(np.array([self.bug_set[anchor]['title_word']])), 
-                                    np.array([self.bug_set[anchor]['description_word']]), 
-                                    np.zeros_like(np.array([self.bug_set[anchor]['description_word']])),
+            vector = model.predict([ np.array([self.bug_set[anchor]['title_token']]),
+                                    np.zeros_like(np.array([self.bug_set[anchor]['title_token']])), 
+                                    np.array([self.bug_set[anchor]['description_token']]), 
+                                    np.zeros_like(np.array([self.bug_set[anchor]['description_token']])),
                                     np.array([retrieval.get_info(self.bug_set[anchor])]) ])
         annoy = AnnoyIndex(vector.shape[1])
         embeds = []
         title_data, desc_data, info_data = [], [], []
-        batch_bugs_wo_positives = list(set(batch_bugs) - set(invalid_bugs)) 
+        batch_bugs_wo_positives = list(set(batch_bugs) - set(invalid_bugs))
+        #batch_bugs_wo_positives.append(pos)
         for bug_id in batch_bugs_wo_positives:
             bug = self.bug_set[bug_id]
-            title_data.append(bug['title_word'])
-            desc_data.append(bug['description_word'])
+            title_data.append(bug['title_token'])
+            desc_data.append(bug['description_token'])
             info_data.append(retrieval.get_info(bug))
         if method == 'keras':
             embeds = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
@@ -418,24 +439,38 @@ class Baseline:
         for bug_id, embed in zip(batch_bugs_wo_positives, embeds):
             annoy.add_item(bug_id, embed)
         annoy.build(10) # 10 trees
-        rank = annoy.get_nns_by_vector(vector[0], 20, include_distances=False)
+        num_of_examples = 20
+        rank = annoy.get_nns_by_vector(vector[0], num_of_examples, include_distances=False)
         neg_bug = rank[0]
         if neg_bug == anchor:
             neg_bug = rank[1]
+        # Getting the next position from pos
+        # indice = 0
+        # found_pos = -1
+        # neg_bug = -1
+        # while indice < num_of_examples:
+        #     neg_bug = rank[indice]
+        #     if neg_bug == pos:
+        #         found_pos = neg_bug
+        #     elif found_pos != -1 and neg_bug != -1:
+        #         break
+        #     indice+=1
+        # if(found_pos == neg_bug):
+        #     neg_bug = rank[-2]
         return neg_bug
 
     def fill_padding(self, bug, window_padding, pad_desc):
-        vector_padding = bug['description_word_bert'][window_padding:window_padding+pad_desc]
+        vector_padding = bug['description_token'][window_padding:window_padding+pad_desc]
         if(len(vector_padding) != pad_desc):
             return
-        bug['description_word'] = np.concatenate([[self.TOKEN_BEGIN], vector_padding[1:-1], [self.TOKEN_END]])
+        bug['description_token'] = np.concatenate([[self.TOKEN_BEGIN], vector_padding[1:-1], [self.TOKEN_END]])
 
     def apply_window_padding(self, bug_anchor, bug_neg):
         pad_title = self.MAX_SEQUENCE_LENGTH_T
         pad_desc = self.MAX_SEQUENCE_LENGTH_D
         iteration = 1
-        while np.array_equal(bug_anchor['description_word'], bug_neg['description_word']) and pad_desc * iteration < len(bug_neg['description_word_bert']):
-            size_content = len(bug_neg['description_word_bert']) - pad_desc * iteration
+        while np.array_equal(bug_anchor['description_token'], bug_neg['description_token']) and pad_desc * iteration < len(bug_neg['description_token']):
+            size_content = len(bug_neg['description_token']) - pad_desc * iteration
             if(size_content >= pad_desc):
                 window_padding = pad_desc * iteration
                 self.fill_padding(bug_neg, window_padding, pad_desc)
@@ -480,7 +515,7 @@ class Baseline:
                 if not TRIPLET_HARD:
                     neg = self.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
-                    neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, buckets[issues_by_buckets[anchor]])
+                    neg = self.get_neg_bug_semihard(retrieval, model, batch_bugs, anchor, pos, buckets[issues_by_buckets[anchor]])
                 bug_anchor = self.bug_set[anchor]
                 bug_pos = self.bug_set[pos]
                 if neg not in self.bug_set:
@@ -539,7 +574,6 @@ class Baseline:
                 return vocab
         except IOError:
             print('can not load vocabulary')
-            sys.exit(0)
     
     def generating_embed(self, GLOVE_DIR, EMBEDDING_DIM):
         embeddings_index = {}

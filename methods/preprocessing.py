@@ -16,6 +16,7 @@ nltk.download('punkt')
 stop_words = set(stopwords.words('english'))
 import matplotlib.pyplot as plt
 
+import networkx as nx
 import _pickle as pickle
 
 from multiprocessing import Pool
@@ -61,10 +62,11 @@ class EntityMatcher(object):
 
 class Preprocess:
 
-  def __init__(self, DATASET, DOMAIN, PAIRS, COLAB):
+  def __init__(self, DATASET, DOMAIN, PAIRS, COLAB, PREPROCESSING):
     self.MAX_NB_WORDS = 20000
     self.VALIDATION_SPLIT = 0.9
     self.COLAB = COLAB
+    self.PREPROCESSING = PREPROCESSING
     self.DIR = '{}data/processed'.format(COLAB) # where will be exported
     self.DATASET=DATASET
     self.DOMAIN=DOMAIN
@@ -160,11 +162,16 @@ class Preprocess:
       expanded_text = re.sub("'", "", expanded_text)
       return expanded_text
 
+  def save_buckets(self, buckets):
+    with open(os.path.join(self.DIR, self.BASE + '_buckets.pkl'), 'wb') as f:
+      pickle.dump(buckets, f)
+
   def read_pairs(self, df):
     bug_pairs = []
     bucket_dups = []
     bug_ids = set()
     buckets = self.create_bucket(df)
+    self.save_buckets(buckets)
     # buckets
     for key in buckets:
       if len(buckets[key]) > 1:
@@ -260,29 +267,31 @@ class Preprocess:
     return text
 
   def normalize_text(self, text):
-    # text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', str(text)) # [0-9] min
-    # # Extension files
-    # #text = re.sub(r'(WAR|zip|ZIP|css)', 'extension file', text) # extension file
-    # #text = re.sub(r'.(zip|txt|java|js|html|php|pdf|exe|doc|jar|xml)', ' extension file', text) # extension file
-    # # Memory 
-    # text = re.sub(r'kB', 'kb', text)
-    # # Keyboards
-    # text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
-    # # Contraction
-    # text=self.expand_contractions(text, contractions_dict)
+    if self.PREPROCESSING == 'bert':
+      text = " ".join(self.tokenizer.tokenize(str(text)))
+    else:
+      text = re.sub(r'[0-9]{1,} (min|minutes|minute|m)', 'x time', str(text)) # [0-9] min
+      # Extension files
+      #text = re.sub(r'(WAR|zip|ZIP|css)', 'extension file', text) # extension file
+      #text = re.sub(r'.(zip|txt|java|js|html|php|pdf|exe|doc|jar|xml)', ' extension file', text) # extension file
+      # Memory 
+      text = re.sub(r'kB', 'kb', text)
+      # Keyboards
+      text = re.sub(r'('+('|'.join(self.keyboards))+')', 'keyboard', text) # key board
+      # Contraction
+      text=self.expand_contractions(text, contractions_dict)
 
-    # # NER processing
-    # text = text[:100000] # limit of spacy lib
-    # text = self.ner(text)
+      # NER processing
+      text = text[:100000] # limit of spacy lib
+      text = self.ner(text)
 
-    # tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
-    # text = ' '.join([self.func_name_tokenize(token) for token in tokens])
-    # #     text = ' '.join(tokens)
-    
-    # text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
-    # text = [word.lower() for word in nltk.word_tokenize(text)]
-    # text = ' '.join([word for word in text]).encode('utf-8')
-    text = " ".join(self.tokenizer.tokenize(str(text)))
+      tokens = re.compile(r'[\W_]+', re.UNICODE).split(text)
+      text = ' '.join([self.func_name_tokenize(token) for token in tokens])
+      #     text = ' '.join(tokens)
+      
+      text = re.sub(r'\d+((\s\d+)+)?', ' ', text)
+      text = [word.lower() for word in nltk.word_tokenize(text)]
+      text = ' '.join([word for word in text]).encode('utf-8')
     return text
 
   def save_dict(self, set, filename):
@@ -361,17 +370,21 @@ class Preprocess:
           if 'title' not in bug or bug['title'] == '':
               bug['title'] = bug['description']
           
-          description = normalize_text(bug['description'])
-          bug['description_original'] = bug['description']
-          bug['description_bert'] = description
-          title = normalize_text(bug['title'])
-          bug['title_original'] = bug['title']
-          bug['title_bert'] = title
+          if self.PREPROCESSING == 'bert':
+            description = normalize_text(bug['description'])
+            bug['description_original'] = bug['description']
+            bug['description'] = description
+            title = normalize_text(bug['title'])
+            bug['title_original'] = bug['title']
+            bug['title'] = title
+          else:
+            bug['description'] = normalize_text(bug['description'])
+            bug['title'] = normalize_text(bug['title'])
                
           normalized_bugs_json.append('{}\n'.format(bug.to_json()))
 
-          text.append(bug['description_bert'])
-          text.append(bug['title_bert'])
+          text.append(bug['description'])
+          text.append(bug['title'])
           loop.update(1)
 
     return [products, bug_severities, priorities, versions, components, bug_statuses, text, normalized_bugs_json]
@@ -449,12 +462,21 @@ class Preprocess:
           #bug = json.loads(line)
           #print(bug)
           cont+=1
-          ids, segments = self.tokenizer.encode('' if bug['description_original'] == None else bug['description_original'], max_len=self.MAX_SEQUENCE_LENGTH_D)
-          bug['description_word_bert'] = ids
-          ids, segments = self.tokenizer.encode('' if bug['title_original'] == None else bug['title_original'], max_len=self.MAX_SEQUENCE_LENGTH_T)
-          bug['title_word_bert'] = ids
-          bug.pop('description_original')
-          bug.pop('title_original')
+          if self.PREPROCESSING == 'bert':
+            ids, segments = self.tokenizer.encode('' if bug['description_original'] == None else bug['description_original'], max_len=self.MAX_SEQUENCE_LENGTH_D)
+            bug['description_token'] = ids
+            bug['description_segment'] = segments
+            ids, segments = self.tokenizer.encode('' if bug['title_original'] == None else bug['title_original'], max_len=self.MAX_SEQUENCE_LENGTH_T)
+            bug['title_token'] = ids
+            bug['title_segment'] = segments
+            bug.pop('description_original')
+            bug.pop('title_original')
+          else: # BASELINE
+            bug['description_token'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['description'].split()]
+            if len(bug['title']) == 0:
+                bug['title'] = bug['description'][:10]
+            bug['title_token'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['title'].split()]
+          # Save the bug processed
           bugs_set[bug['issue_id']] = bug
           with open(os.path.join(bug_dir, str(bug['issue_id']) + '.pkl'), 'wb') as f:
               pickle.dump(bug, f)
@@ -528,34 +550,23 @@ class Preprocess:
   def create_bucket(self, df):
     print("Creating the buckets...")
     buckets = {}
-    # Reading the buckets
-    df_buckets = df[df['dup_id'] == '[]']
-    loop = tqdm(total=df_buckets.shape[0])
-    for row in df_buckets.iterrows():
-        name = row[1]['issue_id']
-        buckets[name] = set()
-        buckets[name].add(name)
-        loop.update(1)
-    loop.close()
-    # Fill the buckets
-    df_duplicates = df[df['dup_id'] != '[]']
-    loop = tqdm(total=df_duplicates.shape[0])
-    for row_bug_id, row_dup_id in df_duplicates[['issue_id', 'dup_id']].values:
-        bucket_name = int(row_dup_id)
-        dup_id = row_bug_id
-        while bucket_name not in buckets:
-            query = df_duplicates[df_duplicates['issue_id'] == bucket_name]
-            if query.shape[0] <= 0: 
-                break
-            bucket_name = int(query['dup_id'])
-        '''
-            Some bugs duplicates point to one master that
-            does not exist in the dataset like openoffice master=152778
-        '''
-        if bucket_name in buckets:
-            buckets[bucket_name].add(dup_id)
-        loop.update(1)
-    loop.close()
+    G=nx.Graph()
+    for row in tqdm(df.iterrows()):
+        bug_id = row[1]['issue_id']
+        dup_id = row[1]['dup_id']
+        if dup_id == '[]':
+            G.add_node(bug_id)
+        else:
+            G.add_edges_from([(int(bug_id), int(dup_id))])
+    for g in tqdm(nx.connected_components(G)):
+        group = set(g)
+        for bug in g:
+            master = int(bug)
+            query = df[df['issue_id'] == master]
+            if query.shape[0] <= 0:
+                group.remove(master)
+                master = np.random.choice(list(group), 1)
+            buckets[int(master)] = group
     return buckets
 
   def getting_pairs(self, array):
@@ -576,8 +587,13 @@ class Preprocess:
   
   def run(self):
     
-      # create dataset directory
+      # create 'dataset' directory
       bug_dir = os.path.join(self.DIR, self.DATASET)
+      if not os.path.exists(bug_dir):
+          os.mkdir(bug_dir)
+
+      # create 'processing' directory
+      bug_dir = os.path.join(bug_dir, self.PREPROCESSING)
       if not os.path.exists(bug_dir):
           os.mkdir(bug_dir)
 
@@ -627,18 +643,31 @@ class Preprocess:
 
 def main():
 
-    try:
-      _, dataset, colab = sys.argv
+    params = sys.argv
+
+    try: 
+      dataset = params[1]
     except:
       print('###### Missing the dataset to be processed #########')
-      print("Ex: $ python preprocessing_baseline.py {eclipse, eclipse_small, netbeans, openoffice} colab")
+      print("Ex: $ python preprocessing.py {eclipse, eclipse_small, netbeans, openoffice} colab {baseline, bert}")
       exit(1)
-    
-    if colab == 'colab':
-      COLAB = 'drive/My Drive/Colab Notebooks/'
-    else:
+
+    try:
+      colab = params[2]
+      if colab == 'colab':
+        COLAB = 'drive/My Drive/Colab Notebooks/'
+      else:
+        COLAB = ''
+    except:
       COLAB = ''
 
+    try:
+      PREPROCESSING = params[3]
+    except:
+      PREPROCESSING = 'baseline'
+    
+    print("Params: dataset={}, colab={}, preprocessing={}".format(dataset, COLAB, PREPROCESSING))
+    
     op = {
       'eclipse' : {
         'DATASET' : 'eclipse',
@@ -667,7 +696,7 @@ def main():
       }
     }
 
-    preprocessing = Preprocess(op[dataset]['DATASET'], op[dataset]['DOMAIN'], op[dataset]['PAIRS'], COLAB)
+    preprocessing = Preprocess(op[dataset]['DATASET'], op[dataset]['DOMAIN'], op[dataset]['PAIRS'], COLAB, PREPROCESSING)
     preprocessing.run()
 
 if __name__ == '__main__':

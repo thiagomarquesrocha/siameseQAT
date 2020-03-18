@@ -10,6 +10,7 @@ import random
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import LabelEncoder
 from keras.utils import to_categorical
+import _pickle as pickle
 
 class Experiment:
 
@@ -20,8 +21,8 @@ class Experiment:
     def load_ids(self):
         self.baseline.load_ids(self.baseline.DIR)
     
-    def load_bugs(self):
-        self.baseline.load_bugs()
+    def load_bugs(self, method='keras'):
+        self.baseline.load_bugs(method=method)
 
     def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=False, FLOATING_PADDING=False):
         return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=TRIPLET_HARD, FLOATING_PADDING=FLOATING_PADDING)
@@ -58,24 +59,27 @@ class Experiment:
         
         return title_a, title_b, desc_a, desc_b, info_a, info_b, sim
 
-    def get_centroid(self, dups, model):
+    def get_centroid(self, dups, model, method):
         baseline = self.baseline
         retrieval = self.retrieval
         title_data, desc_data, info_data = [], [], []
         dups = [bug for bug in dups if bug in baseline.bug_set]
         for bug_id in dups:
             bug = baseline.bug_set[bug_id]
-            title_data.append(bug['title_word'])
-            desc_data.append(bug['description_word'])
+            title_data.append(bug['title_token'])
+            desc_data.append(bug['description_token'])
             info_data.append(retrieval.get_info(bug))
-        embeds = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+        if method == 'bert':
+            embeds = model.predict([ np.array(title_data), np.full((len(title_data), len(title_data[0])), 1), np.array(desc_data), np.full((len(desc_data), len(desc_data[0])), 1), np.array(info_data) ])
+        elif method == 'keras':
+            embeds = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
         kmeans = KMeans(n_clusters=1, random_state=0).fit(embeds)
         master_centroid = kmeans.cluster_centers_.tolist()[0]
         return { 'centroid_embed' : master_centroid }
     
     def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
                                 n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False,
-                                TRIPLET_HARD=False, FLOATING_PADDING=False):
+                                TRIPLET_HARD=False, FLOATING_PADDING=False, method='bert'):
         baseline = self.baseline
         retrieval = self.retrieval
         # global train_data
@@ -109,7 +113,7 @@ class Experiment:
                 if not TRIPLET_HARD:
                     neg = baseline.get_neg_bug(anchor, buckets[issues_by_buckets[anchor]], issues_by_buckets, all_bugs)
                 else:
-                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_bugs, anchor, buckets[issues_by_buckets[anchor]], method='bert')
+                    neg = baseline.get_neg_bug_semihard(self.retrieval, model, batch_bugs, anchor, pos, buckets[issues_by_buckets[anchor]], method=method)
 
                 if neg not in baseline.bug_set \
                     or ((INCLUDE_MASTER or USE_CENTROID) and issues_by_buckets[neg] not in baseline.bug_set):
@@ -125,6 +129,7 @@ class Experiment:
         description_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
         title_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
         description_neg_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
+
         if INCLUDE_MASTER:
             title_master_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_T), 0)
             description_master_pos_ids = np.full((batch_size, baseline.MAX_SEQUENCE_LENGTH_D), 0)
@@ -141,8 +146,8 @@ class Experiment:
                 master_neg_id = issues_by_buckets[neg]
                 master_neg = baseline.bug_set[master_neg_id]
             elif USE_CENTROID:
-                master_anchor = self.get_centroid(retrieval.buckets[issues_by_buckets[anchor]], model)
-                master_neg = self.get_centroid(retrieval.buckets[issues_by_buckets[neg]], model)
+                master_anchor = self.get_centroid(retrieval.buckets[issues_by_buckets[anchor]], model, method=method)
+                master_neg = self.get_centroid(retrieval.buckets[issues_by_buckets[neg]], model, method=method)
             
             baseline.read_batch_bugs(batch_input, bug_anchor, i, title_anchor_ids, description_anchor_ids)
             baseline.read_batch_bugs(batch_pos, bug_pos, i, title_pos_ids, description_pos_ids)
@@ -225,18 +230,9 @@ class Experiment:
         # Link references
         self.retrieval = retrieval
         retrieval.baseline = baseline
-
-        # self.baseline.MAX_SEQUENCE_LENGTH_I = number_of_columns_info # Status, Severity, Version, Component, Module
-
-        # Create the instance from baseline
-        path_buckets = 'data/normalized/{}/{}.csv'.format(DOMAIN, DOMAIN)
-
-        df = pd.read_csv(path_buckets)
-
-        # Load bug ids
-        #retrieval.load_bugs(path, path_train)
-        # Create the buckets
-        retrieval.create_bucket(df)
+        # Load buckets preprocessed from analysing_buckets.ipynb
+        with open(os.path.join(baseline.DIR, DOMAIN + '_buckets.pkl'), 'rb') as f:
+            self.retrieval.buckets = pickle.load(f)
     
     def create_queries(self):
         print("Reading queries from baseline.")
@@ -338,16 +334,16 @@ class Experiment:
                 continue
             bug = bug_set[bug_id]
             if method == 'keras':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
             if method == 'bert':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
             elif method == 'fasttext' or method == 'doc2vec':
                 title_desc_data.append(bug['title'] + ' ' + bug['description'])
             test_vectorized.append({ 'bug_id' : bug_id })
@@ -389,11 +385,11 @@ class Experiment:
                         if issues_by_buckets[bug] != bug: # if the bug is the master
                             queries.add(bug)
             else:
-                if test_bug_id not in bug_train_ids:
-                    queries.add(test_bug_id)
+                # if test_bug_id not in bug_train_ids:
+                queries.add(test_bug_id)
                 for bug_id in ground_truth:
-                    if bug_id not in bug_train_ids:
-                        queries.add(bug_id)
+                    #if bug_id not in bug_train_ids:
+                    queries.add(bug_id)
         
         loop = queries
         if(verbose):
@@ -411,16 +407,16 @@ class Experiment:
                 continue
             bug = bug_set[test_bug_id]
             if method == 'keras':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
             if method == 'bert':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
-                title_data.append(bug['title_word'])
-                desc_data.append(bug['description_word'])
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
             elif method == 'fasttext' or method == 'doc2vec':
                 title_desc_data.append(bug['title'] + ' ' + bug['description'])
 
