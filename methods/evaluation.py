@@ -76,8 +76,9 @@ class Evaluation():
         ground_truth = np.asarray(ground_truth.split(','), int)
         candidates = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:self.MAX_RANK])]
         corrects = len(set(ground_truth) & set(candidates[:k]))
+        # relevant_queries = k if(len(ground_truth) > k) else len(ground_truth)
+        # corrects = corrects / relevant_queries
         corrects = 1 if corrects > 0 else 0
-        #total = len(ground_truth) # only one master from query
         total = 1
         return float(corrects), total
 
@@ -124,6 +125,42 @@ class Evaluation():
         self.recall_at_15_total_sum += self.recall_at_15_total
         self.recall_at_20_total_sum += self.recall_at_20_total
         self.recall_at_25_total_sum += self.recall_at_25_total
+
+class EvaluationPrecision(Evaluation):
+        def top_k_recall(self, row, k):
+            query, rank = row.split('|')
+            query_dup_id, ground_truth = query.split(":")
+            ground_truth = np.asarray(ground_truth.split(','), int)
+            candidates = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:self.MAX_RANK])]
+            corrects = len(set(ground_truth) & set(candidates[:k]))
+            corrects = corrects / k
+            total = 1
+            return float(corrects), total
+
+class EvaluationRecall(Evaluation):
+        def top_k_recall(self, row, k):
+            query, rank = row.split('|')
+            query_dup_id, ground_truth = query.split(":")
+            ground_truth = np.asarray(ground_truth.split(','), int)
+            candidates = [int(item.split(':')[0]) for pos, item in enumerate(rank.split(",")[:self.MAX_RANK])]
+            corrects = len(set(ground_truth) & set(candidates[:k]))
+            relevant_queries = k if(len(ground_truth) > k) else len(ground_truth)
+            corrects = corrects / relevant_queries
+            total = 1
+            return float(corrects), total
+
+class EvaluationFscore():
+        def calculate(self, precision, recall):
+            return 2 * precision * recall / (precision + recall)
+        def evaluate(self, precision, recall):
+            report = {
+                '1 - recall_at_5' : round(self.calculate(precision['1 - recall_at_5'], recall['1 - recall_at_5']), 2),
+                '2 - recall_at_10' : round(self.calculate(precision['2 - recall_at_10'], recall['2 - recall_at_10']), 2),
+                '3 - recall_at_15' : round(self.calculate(precision['3 - recall_at_15'], recall['3 - recall_at_15']), 2),
+                '4 - recall_at_20' : round(self.calculate(precision['4 - recall_at_20'], recall['4 - recall_at_20']), 2),
+                '5 - recall_at_25' : round(self.calculate(precision['5 - recall_at_25'], recall['5 - recall_at_25']), 2)
+            }
+            return report
 
 if __name__ == '__main__':
     evaluation = Evaluation()
