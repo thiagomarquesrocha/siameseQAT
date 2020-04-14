@@ -27,14 +27,21 @@ class Experiment:
     def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=False, FLOATING_PADDING=False):
         return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=TRIPLET_HARD, FLOATING_PADDING=FLOATING_PADDING)
 
-    def batch_classification_test(self, path):
+    def batch_classification_test(self, path, BERT=True):
         encoder = LabelEncoder()
-        
+
         batch_1, batch_2 = {'title' : [], 'desc' : [], 'info' : []}, \
                                             {'title' : [], 'desc' : [], 'info' : []}
-        
+
         batch_triplets, sim = [], []
         
+        batch_1_t, batch_1_d = [], []
+        batch_2_t, batch_2_d = [], []
+        
+        def token(title_token_ids, desc_token_ids, bug):
+            title_token_ids.append([int(v > 0) for v in bug['title_token']])
+            desc_token_ids.append([int(v > 0) for v in bug['description_token']])
+
         with open(path, 'r') as file_in:
             for row in file_in:
                 test = row.split()
@@ -45,8 +52,10 @@ class Experiment:
                 bug2 = self.baseline.bug_set[bug2]
                 self.baseline.read_batch_bugs(batch_1, bug1)
                 self.baseline.read_batch_bugs(batch_2, bug2)
+                token(batch_1_t, batch_1_d, bug1)
+                token(batch_2_t, batch_2_d, bug2)
                 sim.append(label)
-        
+
         sim = encoder.fit_transform(sim)
         sim = to_categorical(sim)
 
@@ -57,6 +66,12 @@ class Experiment:
         info_a = np.array(batch_1['info'])
         info_b = np.array(batch_2['info'])
         
+        if(BERT):
+            batch_1_t = np.asarray(batch_1_t)
+            batch_2_t = np.asarray(batch_2_t)
+            batch_1_d = np.asarray(batch_1_d)
+            batch_2_d = np.asarray(batch_2_d)
+            return title_a, batch_1_t, title_b, batch_2_t, desc_a, batch_1_d, desc_b, batch_2_d, info_a, info_b, sim
         return title_a, title_b, desc_a, desc_b, info_a, info_b, sim
 
     def get_centroid(self, dups, model, method):
