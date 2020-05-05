@@ -32,4 +32,3 @@ do
         echo "Executing deepQL_trainable"
         ipython classification_deep_QL_AND_TL.py
 done
-
