@@ -325,7 +325,7 @@ class Experiment:
     ## Vectorizer the test
     def vectorizer_test(self, bug_set, model, test, issues_by_buckets, method='keras', verbose=1, only_buckets=False):
         test_vectorized = []
-        title_data, desc_data, info_data, title_desc_data = [], [], [], []
+        title_data, desc_data, info_data, topic_data, title_desc_data = [], [], [], [], []
         loop = test
         if(verbose):
             loop = tqdm(test)
@@ -356,6 +356,11 @@ class Experiment:
                 title_data.append(bug['title_token'])
                 desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
+            elif method == 'bert-topic':
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
+                topic_data.append(bug['topics'])
+                info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_token'])
                 desc_data.append(bug['description_token'])
@@ -369,6 +374,8 @@ class Experiment:
             embed_test = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
         elif method == 'bert':
             embed_test = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+        elif method == 'bert-topic':
+            embed_test = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data), np.array(topic_data) ])
         elif method == 'dwen':
             embed_test = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
@@ -383,7 +390,7 @@ class Experiment:
 
     def vectorize_queries(self, bug_set, model, test, issues_by_buckets, bug_train_ids, method='keras', verbose=1, only_buckets=False):
         queries_test_vectorized = []
-        title_data, desc_data, info_data, title_desc_data = [], [], [], []
+        title_data, desc_data, info_data, topic_data, title_desc_data = [], [], [], [], []
         
         # Transform all duplicates in queries
         queries = set()
@@ -429,6 +436,11 @@ class Experiment:
                 title_data.append(bug['title_token'])
                 desc_data.append(bug['description_token'])
                 info_data.append(self.retrieval.get_info(bug))
+            elif method == 'bert-topic':
+                title_data.append(bug['title_token'])
+                desc_data.append(bug['description_token'])
+                topic_data.append(bug['topics'])
+                info_data.append(self.retrieval.get_info(bug))
             elif method == 'dwen':
                 title_data.append(bug['title_token'])
                 desc_data.append(bug['description_token'])
@@ -442,6 +454,8 @@ class Experiment:
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data), np.array(info_data) ])
         elif method == 'bert':
             embed_queries = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data) ])
+        elif method == 'bert-topic':
+            embed_queries = model.predict([ np.array(title_data), np.zeros_like(title_data), np.array(desc_data), np.zeros_like(desc_data), np.array(info_data), np.array(topic_data) ])
         elif method == 'dwen':
             embed_queries = model.predict([ np.array(title_data), np.array(desc_data) ])
         elif method == 'fasttext':
