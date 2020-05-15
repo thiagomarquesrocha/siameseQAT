@@ -405,7 +405,7 @@ class Baseline:
                 self.to_one_hot(bug['version'], self.info_dict['version']))
             )
         #info.append(info_)
-        if('topics' in bug):
+        if('topics' in bug and 'topics' in batch):
             batch['topics'].append(bug['topics'])
         batch['info'].append(info)
         batch['title'].append(bug['title_token'])
