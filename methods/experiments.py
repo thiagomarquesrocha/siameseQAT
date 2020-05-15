@@ -109,11 +109,11 @@ class Experiment:
 
         random.shuffle(data)
 
-        batch_input, batch_pos, batch_neg, master_batch_input, master_batch_neg = {'title' : [], 'desc' : [], 'info' : []}, \
-                                                {'title' : [], 'desc' : [], 'info' : []}, \
-                                                    {'title' : [], 'desc' : [], 'info' : []},\
-                                                        {'title' : [], 'desc' : [], 'info' : [], 'centroid_embed': []}, \
-                                                            {'title' : [], 'desc' : [], 'info' : [], 'centroid_embed': []}
+        batch_input, batch_pos, batch_neg, master_batch_input, master_batch_neg = {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}, \
+                                                {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}, \
+                                                    {'title' : [], 'desc' : [], 'info' : [], 'topics' : []},\
+                                                        {'title' : [], 'desc' : [], 'info' : [], 'topics' : [], 'centroid_embed': []}, \
+                                                            {'title' : [], 'desc' : [], 'info' : [], 'topics' : [], 'centroid_embed': []}
 
         n_train = len(data)
         all_bugs = list(issues_by_buckets.keys())
@@ -196,22 +196,27 @@ class Experiment:
         batch_input['title'] = { 'token' : np.array(batch_input['title']), 'segment' : title_anchor_ids }
         batch_input['desc'] = { 'token' : np.array(batch_input['desc']), 'segment' : description_anchor_ids }
         batch_input['info'] = np.array(batch_input['info'])
+        batch_input['topics'] = np.array(batch_input['topics'])
         batch_pos['title'] = { 'token' : np.array(batch_pos['title']), 'segment' : title_pos_ids }
         batch_pos['desc'] = { 'token' : np.array(batch_pos['desc']), 'segment' : description_pos_ids }
         batch_pos['info'] = np.array(batch_pos['info'])
+        batch_pos['topics'] = np.array(batch_pos['topics'])
         batch_neg['title'] = { 'token' : np.array(batch_neg['title']), 'segment' : title_neg_ids }
         batch_neg['desc'] = { 'token' : np.array(batch_neg['desc']), 'segment' : description_neg_ids }
         batch_neg['info'] = np.array(batch_neg['info'])
+        batch_neg['topics'] = np.array(batch_neg['topics'])
         
         # master
         if INCLUDE_MASTER:
             master_batch_input['title'] = { 'token' : np.array(master_batch_input['title']), 'segment' : title_master_pos_ids }
             master_batch_input['desc'] ={ 'token' : np.array(master_batch_input['desc']), 'segment' : description_master_pos_ids }
             master_batch_input['info'] = np.array(master_batch_input['info'])
+            master_batch_input['topics'] = np.array(master_batch_input['topics'])
             
             master_batch_neg['title'] = { 'token' : np.array(master_batch_neg['title']), 'segment' : title_master_neg_ids }
             master_batch_neg['desc'] = { 'token' : np.array(master_batch_neg['desc']), 'segment' : description_master_neg_ids }
             master_batch_neg['info'] = np.array(master_batch_neg['info'])
+            master_batch_neg['topics'] = np.array(master_batch_neg['topics'])
         elif USE_CENTROID:
             master_batch_input['centroid_embed'] = np.array(master_batch_input['centroid_embed'])
             master_batch_neg['centroid_embed'] = np.array(master_batch_neg['centroid_embed'])
@@ -226,15 +231,15 @@ class Experiment:
 
         input_sample, input_pos, input_neg, master_input_sample, master_neg_sample = {}, {}, {}, {}, {}
 
-        input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'], 'info' : batch_input['info'] }
-        input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'] }
-        input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'] }
+        input_sample = { 'title' : batch_input['title'], 'description' : batch_input['desc'], 'info' : batch_input['info'], 'topics' : batch_input['topics'] }
+        input_pos = { 'title' : batch_pos['title'], 'description' : batch_pos['desc'], 'info': batch_pos['info'], 'topics' : batch_pos['topics'] }
+        input_neg = { 'title' : batch_neg['title'], 'description' : batch_neg['desc'], 'info': batch_neg['info'], 'topics' : batch_neg['topics'] }
         # master
         if INCLUDE_MASTER: 
             master_input_sample = { 'title' : master_batch_input['title'], 'description' : master_batch_input['desc'], 
-                                'info' : master_batch_input['info'] }
+                                'info' : master_batch_input['info'], 'topics' : master_batch_input['topics'] }
             master_neg_sample = { 'title' : master_batch_neg['title'], 'description' : master_batch_neg['desc'], 
-                                'info' : master_batch_neg['info'] }
+                                'info' : master_batch_neg['info'], 'topics' : master_batch_neg['topics'] }
             return batch_triplets, input_sample, input_pos, input_neg, master_input_sample, master_neg_sample, sim #sim
         elif USE_CENTROID:
             master_input_sample = { 'centroid_embed': master_batch_input['centroid_embed'] }
