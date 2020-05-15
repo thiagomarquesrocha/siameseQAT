@@ -47,27 +47,31 @@ class Baseline:
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
         self.TOKEN_BEGIN = TOKEN_BEGIN
         self.TOKEN_END = TOKEN_END
-        self.get_info_dict(dataset)
+        self.get_info_dict(DIR)
 
-    def get_info_dict(self, dataset):
-        if dataset is None: return
+    def get_feature_size(self, DIR, name):
+        with open(os.path.join(DIR, '{}.dic'.format(name)), 'rb') as f:
+            features = str(f.read()).split('\\n')[:-1]
+        return len(features)
+
+    def get_info_dict(self, DIR):
         # self.info_dict = {'bug_severity': 7, 'bug_status': 3, 'component': 323, 'priority': 5, 'product': 116, 'version': 197}
-        df = pd.read_csv(dataset)
+        
         if self.DOMAIN != 'firefox':
             self.info_dict = {
-                'bug_severity' : df['bug_severity'].unique().shape[0],
-                'product' : df['product'].unique().shape[0],
-                'bug_status' : df['bug_status'].unique().shape[0],
-                'component' : df['component'].unique().shape[0],
-                'priority' : df['priority'].unique().shape[0],
-                'version' : df['version'].unique().shape[0]
+                'bug_severity' : self.get_feature_size(DIR, 'bug_severity'),
+                'product' : self.get_feature_size(DIR, 'product'),
+                'bug_status' : self.get_feature_size(DIR, 'bug_status'),
+                'component' : self.get_feature_size(DIR, 'component'),
+                'priority' : self.get_feature_size(DIR, 'priority'),
+                'version' : self.get_feature_size(DIR, 'version')
             }
         else:
             self.info_dict = {
-                'bug_status' : df['bug_status'].unique().shape[0],
-                'component' : df['component'].unique().shape[0],
-                'priority' : df['priority'].unique().shape[0],
-                'version' : df['version'].unique().shape[0]
+                'bug_status' : self.get_feature_size(DIR, 'bug_status'),
+                'component' : self.get_feature_size(DIR, 'component'),
+                'priority' : self.get_feature_size(DIR, 'priority'),
+                'version' : self.get_feature_size(DIR, 'version')
             }
 
     def load_ids(self, DIR):

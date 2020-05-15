@@ -27,11 +27,11 @@ class Experiment:
     def batch_iterator(self, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=False, FLOATING_PADDING=False):
         return self.baseline.batch_iterator(self.retrieval, model, data, dup_sets, bug_ids, batch_size, n_neg, issues_by_buckets, TRIPLET_HARD=TRIPLET_HARD, FLOATING_PADDING=FLOATING_PADDING)
 
-    def batch_classification_test(self, path, BERT=True):
+    def batch_classification_test(self, path, BERT=True, TOPIC=False):
         encoder = LabelEncoder()
 
-        batch_1, batch_2 = {'title' : [], 'desc' : [], 'info' : []}, \
-                                            {'title' : [], 'desc' : [], 'info' : []}
+        batch_1, batch_2 = {'title' : [], 'desc' : [], 'info' : [], 'topics' : [] }, \
+                                            {'title' : [], 'desc' : [], 'info' : [], 'topics' : [] }
 
         batch_triplets, sim = [], []
         
@@ -65,12 +65,17 @@ class Experiment:
         desc_b = np.array(batch_2['desc'])
         info_a = np.array(batch_1['info'])
         info_b = np.array(batch_2['info'])
+        if(TOPIC):
+            topic_a = np.array(batch_1['topics'])
+            topic_b = np.array(batch_2['topics'])
         
         if(BERT):
             batch_1_t = np.asarray(batch_1_t)
             batch_2_t = np.asarray(batch_2_t)
             batch_1_d = np.asarray(batch_1_d)
             batch_2_d = np.asarray(batch_2_d)
+            if(TOPIC):
+                return title_a, batch_1_t, title_b, batch_2_t, desc_a, batch_1_d, desc_b, batch_2_d, info_a, info_b, topic_a, topic_b, sim    
             return title_a, batch_1_t, title_b, batch_2_t, desc_a, batch_1_d, desc_b, batch_2_d, info_a, info_b, sim
         return title_a, title_b, desc_a, desc_b, info_a, info_b, sim
 
