@@ -25,12 +25,12 @@
 #done
 
 # DeepQL no trainable
-for i in "netbeans" "openoffice"
-do
-        export epochs=1000 base=$i
-        echo "Executing deepQL_no_trainable"
-        ipython deepQL_no_trainable.py
-done
+#for i in "eclipse" "netbeans" "openoffice"
+#do
+#        export epochs=1000 base=$i
+#        echo "Executing deepQL_no_trainable"
+#        ipython deepQL_no_trainable.py
+#done
 
 # DeepTL
 for i in "eclipse" "netbeans" "openoffice"
@@ -41,12 +41,12 @@ do
 done
 
 # DeepQL trainable
-for i in "eclipse" "netbeans" "openoffice"
-do
-        export epochs=1000 base=$i
-        echo "Executing deepQL_trainable"
-        ipython deepQL_trainable.py
-done
+#for i in "eclipse" "netbeans" "openoffice"
+#do
+#        export epochs=1000 base=$i
+#        echo "Executing deepQL_trainable"
+#        ipython deepQL_trainable.py
+#done
 
 
 # DMS_QL
