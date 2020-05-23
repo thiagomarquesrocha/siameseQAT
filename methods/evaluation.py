@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.utils.multiclass import unique_labels
 
+PRECISION = 3
+
 class Evaluation():
     def __init__(self, verbose=1):
         self.verbose = verbose
@@ -100,12 +102,12 @@ class Evaluation():
                 self.recall(row)
         
         report = {
-            '0 - recall_at_1' : round(self.recall_at_1_corrects_sum / self.recall_at_1_total_sum, 2),
-            '1 - recall_at_5' : round(self.recall_at_5_corrects_sum / self.recall_at_5_total_sum, 2),
-            '2 - recall_at_10' : round(self.recall_at_10_corrects_sum / self.recall_at_10_total_sum, 2),
-            '3 - recall_at_15' : round(self.recall_at_15_corrects_sum / self.recall_at_15_total_sum, 2),
-            '4 - recall_at_20' : round(self.recall_at_20_corrects_sum / self.recall_at_20_total_sum, 2),
-            '5 - recall_at_25' : round(self.recall_at_25_corrects_sum / self.recall_at_25_total_sum, 2)
+            '0 - recall_at_1' : round(self.recall_at_1_corrects_sum / self.recall_at_1_total_sum, PRECISION),
+            '1 - recall_at_5' : round(self.recall_at_5_corrects_sum / self.recall_at_5_total_sum, PRECISION),
+            '2 - recall_at_10' : round(self.recall_at_10_corrects_sum / self.recall_at_10_total_sum, PRECISION),
+            '3 - recall_at_15' : round(self.recall_at_15_corrects_sum / self.recall_at_15_total_sum, PRECISION),
+            '4 - recall_at_20' : round(self.recall_at_20_corrects_sum / self.recall_at_20_total_sum, PRECISION),
+            '5 - recall_at_25' : round(self.recall_at_25_corrects_sum / self.recall_at_25_total_sum, PRECISION)
         }
 
         return report
@@ -160,12 +162,12 @@ class EvaluationFscore():
             return 2 * precision * recall / (precision + recall)
         def evaluate(self, precision, recall):
             report = {
-                '0 - recall_at_1' : round(self.calculate(precision['0 - recall_at_1'], recall['0 - recall_at_1']), 2),
-                '1 - recall_at_5' : round(self.calculate(precision['1 - recall_at_5'], recall['1 - recall_at_5']), 2),
-                '2 - recall_at_10' : round(self.calculate(precision['2 - recall_at_10'], recall['2 - recall_at_10']), 2),
-                '3 - recall_at_15' : round(self.calculate(precision['3 - recall_at_15'], recall['3 - recall_at_15']), 2),
-                '4 - recall_at_20' : round(self.calculate(precision['4 - recall_at_20'], recall['4 - recall_at_20']), 2),
-                '5 - recall_at_25' : round(self.calculate(precision['5 - recall_at_25'], recall['5 - recall_at_25']), 2)
+                '0 - recall_at_1' : round(self.calculate(precision['0 - recall_at_1'], recall['0 - recall_at_1']), PRECISION),
+                '1 - recall_at_5' : round(self.calculate(precision['1 - recall_at_5'], recall['1 - recall_at_5']), PRECISION),
+                '2 - recall_at_10' : round(self.calculate(precision['2 - recall_at_10'], recall['2 - recall_at_10']), PRECISION),
+                '3 - recall_at_15' : round(self.calculate(precision['3 - recall_at_15'], recall['3 - recall_at_15']), PRECISION),
+                '4 - recall_at_20' : round(self.calculate(precision['4 - recall_at_20'], recall['4 - recall_at_20']), PRECISION),
+                '5 - recall_at_25' : round(self.calculate(precision['5 - recall_at_25'], recall['5 - recall_at_25']), PRECISION)
             }
             return report
 
