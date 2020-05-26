@@ -32,8 +32,16 @@
 #        ipython deepQL_no_trainable.py
 #done
 
-# DeepTL
+# DeepTL topics
 for i in "eclipse" "netbeans" "openoffice"
+do
+        export epochs=1000 base=$i
+        echo "Executing deepTL_topics"
+        ipython deepTL_topics.py
+done
+
+# DeepTL
+for i in "eclipse" "netbeans"
 do
         export epochs=1000 base=$i
         echo "Executing deepTL"
