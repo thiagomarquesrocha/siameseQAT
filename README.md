@@ -45,7 +45,7 @@ To run the experiments need to preprocess the datasets and the preprocessing_ber
 2.1 - Script
 $ python methods/preprocessing_bert.py {dataset} no-colab
 
-dataset:
+The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories:
 - eclipse
 - netbeans
 - openoffice
@@ -102,21 +102,3 @@ retrieval.ipynb - Generate the retrieval evaluated separated using the test file
 textual_analysis.ipynb - Analyse the vocabulary for all datasets for textual features.
 buckets_analysis.ipynb - Plot with TSNE the embedding latent space for set of duplicates.
 dataset_statistics.ipynb - Statistics generated for all datasets.
-
-### Train and test dataset
-
-- train_{dataset}
-- test_{dataset}
-
-The dataset is divided on:
-
-- mozilla
-- eclipse
-- open office
-- net beans
-
-Each dataset has the follow format:
-
-´´´
-embed title a(separed by ,) | embed title b(separed by ,) | embed desc a (separed by ,) | embed desc b(separed by ,)
-´´´
