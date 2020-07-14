@@ -36,7 +36,7 @@ lybrary:
 
 Jupyter notebook it is required to run the trainings.
 
-Create a file in the root named as "modelos", to save all model trained.
+Create a file in the root named as "modelos", to save all model trained, and "resultados", to save all model results.
 
 ### 2. PREPROCESSING
 
