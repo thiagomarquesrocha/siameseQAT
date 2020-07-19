@@ -79,26 +79,26 @@ For each directory will be create files from train, test, vocabulary corpus and 
 To train the models to evaluate in retrieval task the following files need to be executed. All models are trained
 on train.txt file and evaluated using test.txt.
 
-baseline_dms.ipynb - Train the DMS baseline.
-baseline_dwen.ipynb - Train the DWEN baseline.
-deepTL.ipynb - Train the DeepTL.
-deepQL.ipynb - Train the DeepQL baseline.
+- baseline_dms.ipynb - Train the DMS baseline.
+- baseline_dwen.ipynb - Train the DWEN baseline.
+- deepTL.ipynb - Train the DeepTL.
+- deepQL.ipynb - Train the DeepQL baseline.
 
 #### 3.2 CLASSIFICATION EXPERIMENTS
 
 To train the models to evaluate in classification task the following files need to be executed. All models are trained
 on train.txt file and evaluated using test.txt.
 
-classification_baseline_dms.ipynb - Train the DMS.
-classification_baseline_dwen.ipynb -  Train the DWEN.
-classification_propose_QL_and_TL.ipynb - Train the DeepTL and DeepQL.
+- classification_baseline_dms.ipynb - Train the DMS.
+- classification_baseline_dwen.ipynb -  Train the DWEN.
+- classification_propose_QL_and_TL.ipynb - Train the DeepTL and DeepQL.
 
 ### 4. RESULTS
 
 The following files are used to support analyse the results.
 
-result.ipynb - See all results of retrieval and classification in tabular format.
-retrieval.ipynb - Generate the retrieval evaluated separated using the test file for all models.
-textual_analysis.ipynb - Analyse the vocabulary for all datasets for textual features.
-buckets_analysis.ipynb - Plot with TSNE the embedding latent space for set of duplicates.
-dataset_statistics.ipynb - Statistics generated for all datasets.
+- result.ipynb - See all results of retrieval and classification in tabular format.
+- retrieval.ipynb - Generate the retrieval evaluated separated using the test file for all models.
+- textual_analysis.ipynb - Analyse the vocabulary for all datasets for textual features.
+- buckets_analysis.ipynb - Plot with TSNE the embedding latent space for set of duplicates.
+- dataset_statistics.ipynb - Statistics generated for all datasets.
