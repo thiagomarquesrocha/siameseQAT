@@ -566,7 +566,7 @@ class Preprocess:
             if query.shape[0] <= 0:
                 group.remove(master)
                 master = np.random.choice(list(group), 1)
-            buckets[int(master)] = group
+        buckets[int(master)] = group
     return buckets
 
   def getting_pairs(self, array):
