@@ -97,9 +97,9 @@ class Experiment:
         master_centroid = kmeans.cluster_centers_.tolist()[0]
         return { 'centroid_embed' : master_centroid }
     
-    def batch_iterator_bert(self, model, data, dup_sets, bug_train_ids, batch_size, 
+    def batch_iterator_bert(self, model, data, dup_sets, bug_ids, batch_size, 
                                 n_neg, issues_by_buckets, INCLUDE_MASTER=False, USE_CENTROID=False,
-                                TRIPLET_HARD=False, FLOATING_PADDING=False, method='bert'):
+                                TRIPLET_HARD=False, FLOATING_PADDING=False, method='bert', TEST_SPLIT=False):
         baseline = self.baseline
         retrieval = self.retrieval
         # global train_data
@@ -116,7 +116,7 @@ class Experiment:
                                                             {'title' : [], 'desc' : [], 'info' : [], 'topics' : [], 'centroid_embed': []}
 
         n_train = len(data)
-        all_bugs = list(issues_by_buckets.keys())
+        all_bugs = bug_ids #list(issues_by_buckets.keys())
         buckets = retrieval.buckets
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, \
             batch_bugs_neg, batch_bugs = [], [], [], [], []
@@ -419,9 +419,10 @@ class Experiment:
             else:
                 # if test_bug_id not in bug_train_ids:
                 queries.add(test_bug_id)
-                for bug_id in ground_truth:
+                queries.add(ground_truth)
+                #for bug_id in ground_truth:
                     #if bug_id not in bug_train_ids:
-                    queries.add(bug_id)
+                #    queries.add(bug_id)
         
         loop = queries
         if(verbose):
@@ -551,7 +552,7 @@ class Experiment:
             bug_test_ids.append(pair[1])
         return bug_test_ids
 
-    def read_test_data_classification(self, data, bug_set, bug_train_ids, path='test'):
+    def read_test_data_classification(self, issues_by_buckets, data, bug_set, bug_train_ids, path='test'):
         data_dup_sets = {}
         test_data = []
         print('Reading test data for classification')
@@ -562,15 +563,16 @@ class Experiment:
                     Some bugs duplicates point to one master that
                     does not exist in the dataset like openoffice master=152778
                 '''
-                bugs = [bug for bug in bugs if int(bug) in bug_set] # and int(bug) not in bug_train_ids
+                bugs = [bug for bug in bugs if int(bug) in bug_set] 
                 if len(bugs) < 2:
                     continue
-                query = int(bugs[0])
-                dups = bugs[1:]
-                if query not in data_dup_sets:
-                    data_dup_sets[query] = set()
-                for bug in dups:
-                    bug = int(bug)
-                    data_dup_sets[query].add(bug)
-                    test_data.append([query, bug])
+                
+                for i, bug_id in enumerate(bugs):
+                    bucket = issues_by_buckets[int(bug_id)]
+                    if bucket not in data_dup_sets:
+                        data_dup_sets[bucket] = set()
+                    data_dup_sets[bucket].add(int(bug_id))
+                    for dup_id in bugs[i+1:]:
+                        data_dup_sets[bucket].add(int(dup_id))
+                        test_data.append([int(bug_id), int(dup_id)])
         return test_data, data_dup_sets

@@ -85,9 +85,15 @@ class Evaluation():
         return float(corrects), total
 
     def evaluate(self, path):
+        
+        self.recall_at_1,\
+        self.recall_at_5, self.recall_at_10, \
+        self.recall_at_15, self.recall_at_20, self.recall_at_25 = [], [], [], [], [], []
+
         self.recall_at_1_corrects_sum,\
         self.recall_at_5_corrects_sum, self.recall_at_10_corrects_sum, \
         self.recall_at_15_corrects_sum, self.recall_at_20_corrects_sum, self.recall_at_25_corrects_sum = 0, 0, 0, 0, 0, 0
+        
         self.recall_at_1_total_sum, \
         self.recall_at_5_total_sum, self.recall_at_10_total_sum, self.recall_at_15_total_sum, \
         self.recall_at_20_total_sum, self.recall_at_25_total_sum = 0, 0, 0, 0, 0, 0
@@ -111,6 +117,19 @@ class Evaluation():
         }
 
         return report
+
+    def get_recalls(self):
+        report = {
+            '0 - recall_at_1' : self.recall_at_1,
+            '1 - recall_at_5' : self.recall_at_5,
+            '2 - recall_at_10' : self.recall_at_10,
+            '3 - recall_at_15' : self.recall_at_15,
+            '4 - recall_at_20' : self.recall_at_20,
+            '5 - recall_at_25' : self.recall_at_25
+        }
+
+        return report
+    
     def recall(self, row):
         #if row == '': continue
         self.recall_at_1_corrects, self.recall_at_1_total = self.top_k_recall(row, k=1)
@@ -119,6 +138,13 @@ class Evaluation():
         self.recall_at_15_corrects, self.recall_at_15_total = self.top_k_recall(row, k=15)
         self.recall_at_20_corrects, self.recall_at_20_total = self.top_k_recall(row, k=20)
         self.recall_at_25_corrects, self.recall_at_25_total = self.top_k_recall(row, k=25)
+
+        self.recall_at_1 += [self.recall_at_1_corrects]
+        self.recall_at_5 += [self.recall_at_5_corrects]
+        self.recall_at_10 += [self.recall_at_10_corrects]
+        self.recall_at_15 += [self.recall_at_15_corrects]
+        self.recall_at_20 += [self.recall_at_20_corrects]
+        self.recall_at_25 += [self.recall_at_25_corrects]
 
         self.recall_at_1_corrects_sum += self.recall_at_1_corrects
         self.recall_at_5_corrects_sum += self.recall_at_5_corrects

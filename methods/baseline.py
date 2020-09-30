@@ -291,22 +291,29 @@ class Baseline:
     def read_test_data(data, bug_set, issues_by_buckets, path_test):
         test_data = []
         bug_ids = set()
+        data_dup_sets = {}
         bug_set = np.asarray(bug_set, int)
         with open(os.path.join(data, '{}.txt'.format(path_test)), 'r') as f:
             for line in f:
                 bugs = np.asarray(line.strip().split(), int)
-                tokens = [bug for bug in bugs if bug in bug_set and bug in issues_by_buckets]
-                if len(tokens) < 2: 
+                bugs = [bug for bug in bugs if int(bug) in bug_set] 
+                if len(bugs) < 2:
                     continue
-                query = tokens[0]
-                dups = tokens[1:]
-                test_data.append([query, dups])
-                for bug_id in tokens:
-                    bug_ids.add(bug_id)
+                
+                for i, bug_id in enumerate(bugs):
+                    bucket = issues_by_buckets[int(bug_id)]
+                    if bucket not in data_dup_sets:
+                        data_dup_sets[bucket] = set()
+                    data_dup_sets[bucket].add(int(bug_id))
+                    bug_ids.add(int(bug_id))
+                    for dup_id in bugs[i+1:]:
+                        data_dup_sets[bucket].add(int(dup_id))
+                        test_data.append([int(bug_id), int(dup_id)])
+                        bug_ids.add(int(dup_id))
         return test_data, list(bug_ids)
 
     @staticmethod
-    def read_train_data(data, bug_set, path_train):
+    def read_train_data(issues_by_buckets, data, bug_set, path_train):
         data_pairs = []
         data_dup_sets = {}
         print('Reading train data')
@@ -322,9 +329,11 @@ class Baseline:
                 if bug1 not in bug_set or bug2 not in bug_set: 
                     continue
                 data_pairs.append([bug1, bug2])
-                if bug1 not in data_dup_sets.keys():
-                    data_dup_sets[bug1] = set()
-                data_dup_sets[bug1].add(bug2)
+                bucket = issues_by_buckets[bug1]
+                if bucket not in data_dup_sets.keys():
+                    data_dup_sets[bucket] = set()
+                data_dup_sets[bucket].add(bug1)
+                data_dup_sets[bucket].add(bug2)
         return data_pairs, data_dup_sets
 
     @staticmethod
@@ -350,7 +359,7 @@ class Baseline:
             self.dup_sets_test = self.load_object('dup_sets_test')
             self.bug_ids = self.load_object('bug_ids')
         except:
-            self.train_data, self.dup_sets_train = Baseline.read_train_data(self.DIR, list(self.bug_set), path_train)
+            self.train_data, self.dup_sets_train = Baseline.read_train_data(issues_by_buckets, self.DIR, list(self.bug_set), path_train)
             self.test_data, self.dup_sets_test = Baseline.read_test_data(self.DIR, list(self.bug_set), issues_by_buckets, path_test)
             self.bug_ids = Baseline.read_bug_ids(self.DIR)
             self.save_object('train_data', self.train_data)
@@ -505,7 +514,7 @@ class Baseline:
 
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg, batch_bugs = [], [], [], [], []
 
-        all_bugs = list(issues_by_buckets.keys())
+        all_bugs = bug_ids #list(issues_by_buckets.keys())
         buckets = retrieval.buckets
 
         for offset in range(batch_size):
