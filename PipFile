@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+pytest = {version="==3.5.1"}
+
+[packages]
+pandas = {version="==0.24.2"}
+networkx = {version="==2.1"}
+tqdm = {version="==4.26.0"}
+keras-bert = {version="==0.81.0"}
+tensorflow = {version="==2.2"}
+
+
+[requires]
+python_version = "3.5"

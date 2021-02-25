@@ -21,6 +21,26 @@ In large-scale software development environments, defect reports are maintained 
 
 Some libraries in python environment are needed to run the source code.
 
+First, install pipenv
+
+$ pip install pipenv
+
+$ pipenv install --dev
+
+Export src/
+
+$ export PYTHONPATH=src # Linux
+$ set PYTHONPATH=src # Windows
+
+Run tests
+
+$ pipenv run pytest tests
+
+Run tests looking DEBUG level messages
+
+$ pipenv run pytest --log-cli-level=DEBUG tests
+
+# Old installation
 $ pip install {library}
 
 lybrary:
