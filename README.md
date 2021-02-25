@@ -25,13 +25,16 @@ Some libraries in python environment are required to enable the source code run 
 
 ```
 $ pip install pipenv
-
-or
-
-$ pipenv install --dev
 ```
 
-**Export the src/ to PYTHONPATH**
+**Install dependencies**
+
+```
+$ pipenv install --dev
+$ pipenv install
+```
+
+**Export the directory ```src/``` to ```PYTHONPATH```**
 
 ```
 $ export PYTHONPATH=src # Linux
