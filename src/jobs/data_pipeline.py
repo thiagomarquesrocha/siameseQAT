@@ -11,9 +11,9 @@ from nlp.tokenizer_base import TokenizerBase
 from nlp.tokenizer_bert import TokenizerBert
 from transformation.data_transformation import DataTransformation
 
-logger = logging.getLogger('Preprocessor')
+logger = logging.getLogger('DataPipeline')
 
-class Preprocessor:
+class DataPipeline:
     def __init__(self, DATASET, DOMAIN, COLAB, 
                     PREPROCESSING, VALIDATION_SPLIT=0.9,
                     MAX_SEQUENCE_LENGTH_TITLE=50, MAX_SEQUENCE_LENGTH_DESC=150):
@@ -110,6 +110,7 @@ class Preprocessor:
 
         # Transformation config
         tokenizer = TokenizerBert() if self.PREPROCESSING == 'bert' else TokenizerBase()
+        # Create pipeline
         data_pipeline = DataTransformation(self, tokenizer)
         # Step to select what fields to process
         text = data_pipeline.select_fields_stage(bug_ids, df_train)

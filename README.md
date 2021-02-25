@@ -19,28 +19,39 @@ In large-scale software development environments, defect reports are maintained 
 
 ## 1. PREREQUISITES
 
-Some libraries in python environment are needed to run the source code.
+Some libraries in python environment are required to enable the source code run properly.
 
-First, install pipenv
+**First, install pipenv**
 
+```
 $ pip install pipenv
 
+or
+
 $ pipenv install --dev
+```
 
-Export src/
+**Export the src/ to PYTHONPATH**
 
+```
 $ export PYTHONPATH=src # Linux
 $ set PYTHONPATH=src # Windows
+```
 
-Run tests
+**Run tests**
 
+```
 $ pipenv run pytest tests
+```
 
-Run tests looking DEBUG level messages
+**Run tests looking the DEBUG level messages**
 
+```
 $ pipenv run pytest --log-cli-level=DEBUG tests
+```
 
 # Old installation
+
 $ pip install {library}
 
 lybrary:
@@ -62,8 +73,9 @@ Create a file in the root named as "modelos", to save all model trained, and "re
 
 To run the experiments need to preprocess the datasets and the preprocessing_bert.py.
 
-2.1 - Script
-$ python methods/preprocessing_bert.py {dataset} no-colab
+#### 2.1 - Start using CLI
+
+$ python src/cli.py {dataset} no-colab
 
 The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories:
 - eclipse

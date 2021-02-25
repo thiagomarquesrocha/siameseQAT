@@ -1,4 +1,6 @@
 
+from jobs.data_pipeline import DataPipeline
+
 def get_colab_value(params):
     try:
         colab = params[2]
@@ -25,7 +27,7 @@ def main():
       dataset = params[1]
     except:
       print('###### Missing the dataset to be processed #########')
-      print("Ex: $ python preprocessing.py {eclipse, eclipse_small, netbeans, openoffice} colab {baseline, bert}")
+      print("Ex: $ python src/cli.py {eclipse, eclipse_small, netbeans, openoffice} colab {baseline, bert}")
       exit(1)
 
     COLAB = get_colab_value(params)
@@ -60,8 +62,8 @@ def main():
       }
     }
 
-    preprocessor = Preprocessor(op[dataset]['DATASET'], op[dataset]['DOMAIN'], COLAB, PREPROCESSING)
-    preprocessor.run()
+    pipeline = DataPipeline(op[dataset]['DATASET'], op[dataset]['DOMAIN'], COLAB, PREPROCESSING)
+    pipeline.run()
 
 if __name__ == '__main__':
   main()
