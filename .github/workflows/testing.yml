@@ -20,18 +20,20 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v1
-      - name: Set up Python 3.6
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.7
         uses: actions/setup-python@v1
         with:
-          python-version: 3.6
-      - name: Install pipenv
-        uses: dschep/install-pipenv-action@v1
-
-      # Runs a set of commands using the runners shell
-      - name: Run tests
+          python-version: 3.7
+      - name: Install pipenv and libpq
         run: |
-          export PYTHONPATH=src
+          sudo apt-get install libpq-dev -y
+          pip install pipenv
+      # - name: Install pipenv
+      #   uses: dschep/install-pipenv-action@v1
+      # Runs a set of commands using the runners shell
+      - name: Install dependencies with pipenv
+        run: |
           pipenv install --dev
           pipenv install
-          pipenv run python -m pytest tests
+      - run: pipenv run pytest tests
