@@ -20,12 +20,18 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
+      - name: Set up Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Install pipenv
+        uses: dschep/install-pipenv-action@v1
 
       # Runs a set of commands using the runners shell
-      - name: Testing the project
+      - name: Run tests
         run: |
-          pip install pipenv &&
-          pipenv install --dev &&
-          pipenv run pytest --log-cli-level=DEBUG tests
+          export PYTHONPATH=src
+          pipenv install --dev
+          pipenv install
+          pipenv run python -m pytest tests
