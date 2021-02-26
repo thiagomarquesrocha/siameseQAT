@@ -128,7 +128,7 @@ class DataTransformation:
             #bug = json.loads(line)
             #print(bug)
             cont+=1
-            if self.PREPROCESSING == 'bert':
+            if self.PREPROCESSING == 'bert' or self.PREPROCESSING == 'fake':
                 ids, segments = self.tokenizer.encode('' if bug['description_original'] == None else bug['description_original'], max_len=self.MAX_SEQUENCE_LENGTH_D)
                 bug['description_token'] = ids
                 bug['description_segment'] = segments
@@ -214,7 +214,7 @@ class DataTransformation:
                 if 'title' not in bug or bug['title'] == '':
                     bug['title'] = bug['description']
                 
-                if self.PREPROCESSING == 'bert':
+                if self.PREPROCESSING == 'bert' or self.PREPROCESSING == 'fake':
                     description = tokenizer.apply(bug['description'])
                     bug['description_original'] = bug['description']
                     bug['description'] = description

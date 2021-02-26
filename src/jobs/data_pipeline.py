@@ -9,6 +9,7 @@ from utils.util import Util
 from utils.splitter import Splitter
 from nlp.tokenizer_base import TokenizerBase
 from nlp.tokenizer_bert import TokenizerBert
+from nlp.tokenizer_fake import TokenizerFake
 from transformation.data_transformation import DataTransformation
 
 logger = logging.getLogger('DataPipeline')
@@ -90,6 +91,14 @@ class DataPipeline:
                                         'creation_ts', 'delta_ts']
         return df_train
 
+    def get_tokenizer(self):
+        if self.PREPROCESSING == 'bert':
+            return TokenizerBert()
+        if self.PREPROCESSING == 'base':
+            return TokenizerBase()
+        else:
+            return TokenizerFake() 
+
     def run(self):
         
         # Setup directories
@@ -111,7 +120,7 @@ class DataPipeline:
                                         self.VALIDATION_SPLIT)
 
         # Transformation config
-        tokenizer = TokenizerBert() if self.PREPROCESSING == 'bert' else TokenizerBase()
+        tokenizer = self.get_tokenizer()
         # Create pipeline
         data_pipeline = DataTransformation(self, tokenizer)
         # Step to select what fields to process
