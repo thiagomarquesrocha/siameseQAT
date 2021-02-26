@@ -61,6 +61,8 @@ class DataPipeline:
     def setup(self):
         # create 'dataset' directory
         bug_dir = os.path.join(self.DIR_OUTPUT, self.DATASET)
+        if not os.path.exists(self.DIR_OUTPUT):
+            os.mkdir(self.DIR_OUTPUT)
         if not os.path.exists(bug_dir):
             os.mkdir(bug_dir)
 
