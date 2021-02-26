@@ -7,7 +7,10 @@ from deep_learning.model.model_base import ModelBase
 
 class BERTModel(ModelBase):
     
-    def __init__(self, seq_len, name, number_of_layers=8):
+    # Number of units in output
+    OUTPUT_LAYER = 300
+
+    def __init__(self, seq_len, model_name, number_of_layers=8):
 
         # Load pretrained BERT
         config_path, model_path, vocab_path, token_dict = Util.pretrained_bert()
@@ -33,8 +36,8 @@ class BERTModel(ModelBase):
             outputs += [ model.get_layer(layer.format(number_of_layers)).output for layer in layers ]
         outputs = Average()(outputs)
         outputs = GlobalAveragePooling1D()(outputs)
-        outputs = Dense(300, activation='tanh')(outputs)
+        outputs = Dense(self.OUTPUT_LAYER, activation='tanh')(outputs)
         
-        model = Model(inputs, outputs, name='FeatureBERTGenerationModel{}'.format(name))
+        model = Model(inputs, outputs, name=model_name)
 
         super().__init__(model)
