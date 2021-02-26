@@ -1,0 +1,8 @@
+pytest==3.5.1
+pandas==0.24.2
+networkx==2.1
+tqdm==4.26.0
+keras-bert==0.81.1
+keras-transformer==0.33.0
+tensorflow==1.15.0
+keras==2.2.4

@@ -7,14 +7,17 @@ name = "pypi"
 pytest = {version="==3.5.1"}
 
 [packages]
-pytest = {version="==3.5.1"}
-pandas = {version="==0.24.2"}
-networkx = {version="==2.1"}
-tqdm = {version="==4.26.0"}
-keras-bert = {version="==0.81.1"}
-keras-transformer = {version="==0.33.0"}
-tensorflow = {version="==1.15.0"}
-keras = {version="==2.2.4"}
+pytest = "==3.5.1"
+pandas = "==0.24.2"
+networkx = "==2.1"
+tqdm = "==4.26.0"
+keras-bert = "==0.81.1"
+keras-transformer = "==0.33.0"
+tensorflow = "==1.15.0"
+Keras = "==2.2.4"
 
 [requires]
 python_version = "3.5"
+
+[scripts]
+test = "pytest -x -ra tests"
