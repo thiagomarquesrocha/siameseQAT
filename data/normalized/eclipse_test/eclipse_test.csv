@@ -1,0 +1,172 @@
+bug_id,bug_severity,bug_status,component,creation_ts,delta_ts,description,dup_id,priority,product,resolution,short_desc,version
+3,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2010-05-07 10:28:53 -0400,"KM (10/2/2001 5:55:18 PM)
+	This PR about the deletion indicator in the sync viewer being too subtle.
+	This would be even more true for someone with vision problems.
+	NE has good suggestion of using the label of the compare text viewer.
+	We may also consider a better icon.
+	On to the PR....
+
+- delete file from project
+- synchronize
+- there is no indication that the file has been deleted from the workspace
+- it looks the same as if the file is in the workspace but is empty
+
+NOTES:
+
+KM (8/15/2001 3:37:53 PM)
+	It should appear as a rightfacing '-' arrow in the sync view.
+	Sent screen cap to NE requesting clarification.
+
+NE (8/20/01 9:13:38 AM)
+	The - in the arrow is clearer when there are other arrows present too (the + and change ones).
+	Otherwise, it's easy to miss the distinction, especially when the user's attention is focussed
+	on the text compare panes.
+	I'd expect the Workspace file: label to indicate that it has been deleted.
+	The Repository file: label does this (if I remember correctly) when it has been deleted from the repository.",[],P5,Platform,FIXED,Sync does not indicate deletion (1GIEN83),2.0
+1,normal,CLOSED,Team,2001-10-10 21:34:00 -0400,2012-02-09 15:57:47 -0500,"- Setup a project that contains a *.gif resource
+	- release project to CVS
+	- edit the *.gif resource with an external editor, e.g. PaintShop
+	- save and close external editor
+	- in Navigator open the icon resource and verify that your changes are there
+	- release project
+		-> nothing to release!
+	- in Navigator open the icon resource and verify that your changes are still there
+
+	Problem: because I never ""Refreshed from local"", the workspace hasn't changed so ""Release"" didn't find anything.
+	However opening the resource with an external editor found the modified file on disk and showed the changes.
+
+	The real problem occurs if ""Release"" actually finds something to release but you don't spot that some resources are missing.
+	This is extremely error prone: one of my changes didn't made it into build 110 because of this!
+
+NOTES:
+EG (5/23/01 3:00:33 PM)
+	Release should do a refresh from local before doing the release.
+	Moving to VCM
+
+
+KM (05/27/01 5:10:19 PM)
+	Comments from JM in related email:
+
+	Should not do this for free.  Could have a setting which made it optoinal but should nt be mandatory.  Default setting could be to have it on.
+	Consider the SWT team who keep their workspaces on network drives.  This will be slow.  
+
+	Side effects will be that a build runs when the refresh is completed unless you somehow do it in a workspace runnable and don't end the
+	runnable until after the release.  This would be less than optimal as some builders may be responsible for maintaining some invariants and deriving resources which are releasable.  If you don't run the builders before releasing, the invariants will not be maintained and you will release inconsistent state.
+
+	Summary:  Offer to ""ensure local consistency"" before releasing.
+
+KM (5/31/01 1:30:35 PM)
+	See also 1GEAG1A: ITPVCM:WINNT - Internal error comparing with a document
+	which failed with an error.  Never got log from Tod though.",3,P3,Platform,FIXED,Usability issue with external editors (1GE6IRL),2.0
+8,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2011-05-17 11:40:32 -0400,"With the current VCM API, a repository adapter can either be pessimistic or 
+optimistic.
+	If it is pessimistic, all check-outs are ""reserved"", i.e. no other user 
+is allowed to check
+	out the same resource. If it is optimistic, no check-out is ""reserved"".
+	In other VCM systems (e.g. CC and CVS), you can decide on a resource-by-
+resource basis
+	if a check-out should be ""reserved"" or not.
+	Usually, a check-out is not ""reserved"" if a merge is not difficult, 
+e.g. if there are merge tools.
+	If there are no merge tools, and a merge by hand is not trivial, the 
+check-out should be a
+	""reserved"" check-out.
+
+NOTES:
+
+BB (3/1/2001 9:36:23 AM)
+	Proposed change to the VCM API: checkout() takes an additional boolean 
+parameter
+	""reserved"" and the corresponding activity event is changed accordingly. 
+Does not seem relevant for
+	CVS. Moving to Active_MarkH for comment.
+
+SK (4/11/2001 6:10:17 PM)
+	This will be solved via use of ICCActivity to do checkout and unlock.
+
+SK (4/25/2001 3:49:50 PM)
+	Moving back to active, as this work is only a release candidate.
+
+KM (4/25/01 4:42:08 PM)
+	From note from Mark H:
+		I am not exposed to the whole development
+		community, so I am not aware of what people are complaining 
+about/asking
+		for.  It is needed if we want to support serial development.
+
+		Estimated development time is 1 week by Steve, so I would think 
+that puts
+		it in the future bucket by necessity.
+
+Jean-Michel (11/06/2001 9:37:22 AM)
+	Our current internal VCM API does not support a pessimistic model.",[],P3,Platform,WONTFIX,how can we support ,2.0
+4,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2002-03-01 16:27:31 -0500,"- become synchronized with some project in a repository
+- use a different Eclipse to make a change to a file resource within this project and release it to the repository
+- in the original Eclipse mark this file resource as being read-only (select it, right-click -> Properties, change, OK)
+- select the file resource, right-click -> Team -> Synchronize with Stream
+- in the subsequent comparison view select the file resource, right-click -> Catchup
+- since it has been marked as read-only there are inevitable problems.  However the error dialog that is shown
+	does not offer much assistance (""An IO error occurred: IO Error"")
+
+
+NOTES:",8,P5,Platform,FIXED,need better error message if catching up over read-only resource (1GF69TF),2.0
+6,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2002-02-07 16:29:37 -0500,"IResource.setLocal has problems. This method (which replaces ensureLocal
+and scrubLocal) requires some form of connection to the VCM provider,
+since the VCM provider is the only thing that could make a resource local.
+
+Indeed, the whole notion of ""local"" resources requires VCM support and needs
+to be reviewed.
+
+NOTES:
+
+JM (12/11/2000 10:24:05 PM)
+	The only scenario in which non-local resources makes sense is one 
+involving a VCM.
+	setLocal does not replace ensureLocal.  It is there to support the VCM 
+fetching content 
+	and then telling the workspace that it should expect to see the content 
+in the file system.
+	Similarly, with scrubLocal.  It is expected that the VCM itself is the 
+one that does the 
+	dirty work of adding/deleting the content in the file system.  
+
+jeem (12/13/00 7:01:26 PM) - Where are ensureLocal and scrubLocal? They don't 
+appear
+in the API any more (they were there in tech preview).
+
+JM (01/02/2001 11:32:24 AM)
+	These notions should be related to the VCM.
+	Moving to BB for consideration.
+
+KM (4/6/01 3:49:13 PM)
+	Only sender that calls it with 'false' is ScrubLocalAction, which looks 
+like it can be deleted.
+	We are not making use of this core feature since neither CVS nor CC 
+benefits from it.
+	I am concerned then it may not even work given there are no senders 
+of 'false'.
+	Nothing to be done about this right now, moving to future.
+
+JM (06/04/2001 6:58:28 PM)
+	There likely are test suites which test the (false) case.
+	This is both legacy and future expansion.  The VCM model does not 
+require one to 
+	have all resources local.  CVS and CC appear to have a model where 
+everything is local.  
+	Things like VSS do not use this model.  I believe that PVCS and 
+Perforce do not require you
+	to have everything local but that is fuzzy for me.  DAV does not 
+specify either way as
+	it is a protocol.  It is easy to see both modes of operation (i.e., 
+both ""I GET the whole project"" and 
+	""I GET only what I need"").  
+	Regardless, the setLocal functionality relates to modeling resource 
+existance 
+	without actualy being forced to fetch the resource.
+
+	So, this is core API which is related to part of the VCM model which is 
+not yet fully implemented.
+	If you have a particular concern about the API being there, we can 
+remove the it until VCM 
+	implementations for VSS, DAV, ... are being done and determine that 
+they need the behaviour.",[],P5,Platform,INVALID,API - IResource.setLocal has problems (1G5TC8L),2.0
