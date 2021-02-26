@@ -20,7 +20,6 @@ class DataTransformation:
         self.bugs = {}
         self.bugs_saved = []
 
-
     def select_fields_stage(self, bug_ids, df):
         print("Normalizing text...")
         products = set()

@@ -30,7 +30,6 @@ $ pip install pipenv
 **Install dependencies**
 
 ```
-$ pipenv install --dev
 $ pipenv install
 ```
 
