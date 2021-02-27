@@ -1,0 +1,2 @@
+class SiameseQATModel(ModelBase):
+    pass

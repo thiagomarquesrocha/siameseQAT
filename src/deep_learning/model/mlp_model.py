@@ -1,5 +1,5 @@
-from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.models import Model
+from keras.layers import Input, Dense
+from keras.models import Model
 from deep_learning.model.model_base import ModelBase
 
 class MLPModel(ModelBase):

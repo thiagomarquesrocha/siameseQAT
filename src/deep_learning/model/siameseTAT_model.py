@@ -1,0 +1,2 @@
+class SiameseTATModel(ModelBase):
+    pass

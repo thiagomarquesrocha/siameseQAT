@@ -1,4 +1,4 @@
-from tensorflow import keras
+import keras
 
 class ModelBase(keras.Model):
     
@@ -8,3 +8,6 @@ class ModelBase(keras.Model):
 
     def call(self, inputs):
         return self.model(inputs)
+
+    def compute_output_shape(self, input_shape):
+         return input_shape
