@@ -7,7 +7,7 @@ from deep_learning.loss.quintet_loss import quintet_loss, QuintetWeights, \
                                             quintet_trainable, quintet_loss_output, \
                                             TL_w, TL_w_centroid, TL, TL_centroid
 
-class SiameseQAModel(ModelBase):
+class SiameseQA():
 
     def __init__(self, model_name, title_size=10, desc_size=100, 
                     categorical_size=10, number_of_BERT_layers=8, trainable=False):
@@ -31,12 +31,14 @@ class SiameseQAModel(ModelBase):
         output = concatenate([tl_l, tl_l_c, TL_weight, TL_centroid_weight])
         output = Lambda(quintet_trainable, name='quintet_trainable')(output)
         model = Model(inputs = inputs, outputs = output, name = model_name)
-        self.metrics = [TL_w, TL_w_centroid, TL, TL_centroid]
 
-        super().__init__(model)
+        self.model = model
+    
+    def get_model(self):
+        return self.model
 
     def get_metrics(self):
-        return self.metrics
+        return [TL_w, TL_w_centroid, TL, TL_centroid]
 
     def get_loss(self):
         return quintet_loss_output

@@ -5,11 +5,11 @@ from deep_learning.model.model_base import ModelBase
 from keras.models import Model
 import keras
 
-class SiameseBaseModel(ModelBase):
+class SiameseBaseModel():
 
     def __init__(self, title_size=10, desc_size=100, categorical_size=2, 
                     topic_size=40, number_of_BERT_layers=8):
-        model_name = 'SiameseModel'
+        model_name = 'bug_embed'
         input_list = {}
         model_list = {}
 
@@ -36,7 +36,6 @@ class SiameseBaseModel(ModelBase):
                 'input' : ['topic'],
                 'model' : topic_feat
             }
-            
         if categorical_size > 0:
             categorical_feat = MLPModel(input_size=categorical_size, input_name="CategoricalFeatureBugInput", model_name='CategoricalFeatureModel')
             input_list['categorical']  = { 'input_size' : categorical_size }
@@ -47,10 +46,7 @@ class SiameseBaseModel(ModelBase):
 
         model = SiameseModel(model_name, input_list, model_list)
         
-        super().__init__(model)
-
-    def call(self, inputs):
-        return self.model.call(inputs)
+        self.model = model
 
     def get_model(self):
         return self.model.get_model()

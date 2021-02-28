@@ -4,26 +4,38 @@ import keras
 from deep_learning.model.bert_model import BERTModel
 from deep_learning.model.mlp_model import MLPModel
 from deep_learning.model.siamese_model import SiameseModel
-from deep_learning.model.siameseQA_model import SiameseQAModel
+from deep_learning.model.siameseQA_model import SiameseQA
 from deep_learning.model.compile_model import compile_model
 
 class TestDeepLearningModel:
     
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_siameseQA_A_model_then_successful(self):
-        model = SiameseQAModel(model_name='SiameseQA-A', title_size=1, desc_size=1, 
+        model = SiameseQA(model_name='SiameseQA-A', title_size=1, desc_size=1, 
                                 categorical_size=1, number_of_BERT_layers=1, 
                                     trainable=False)
-        compile_model(model)
-        assert model != None
+        model = compile_model(model)
+        assert model.get_layer('categorical') != None
+        assert model.get_layer('title_token') != None
+        assert model.get_layer('title_segment') != None
+        assert model.get_layer('mlpmodel_1') != None
+        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('concatenated_bug_embed') != None
+        assert model.get_layer('quintet_trainable') != None
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_siameseQA_W_model_then_successful(self):
-        model = SiameseQAModel(model_name='SiameseQA-W', title_size=1, desc_size=1, 
+        model = SiameseQA(model_name='SiameseQA-W', title_size=1, desc_size=1, 
                                 categorical_size=1, number_of_BERT_layers=1, 
                                     trainable=True)
-        compile_model(model)
-        assert model != None
+        model = compile_model(model)
+        assert model.get_layer('categorical') != None
+        assert model.get_layer('title_token') != None
+        assert model.get_layer('title_segment') != None
+        assert model.get_layer('mlpmodel_1') != None
+        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('concatenated_bug_embed') != None
+        assert model.get_layer('quintet_trainable') != None
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_siamese_model_then_successful(self):
