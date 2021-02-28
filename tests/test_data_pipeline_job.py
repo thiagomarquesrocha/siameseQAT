@@ -18,7 +18,7 @@ class TestDataPipeline:
         dataset = 'eclipse_test'
         domain = 'eclipse_test'
         COLAB = ''
-        PREPROCESSING = 'fake'
+        PREPROCESSING = 'bert'
         pipeline = DataPipeline(dataset, domain, COLAB, PREPROCESSING)
         pipeline.run()
         assert True
