@@ -71,3 +71,6 @@ def triplet_loss(vects):
     
     ### Code from Tensorflow function semi-hard triplet loss ENDS here.
     return semi_hard_triplet_loss_distance
+
+def triplet_loss_output(y_true, y_pred):
+    return triplet_loss(y_pred)
