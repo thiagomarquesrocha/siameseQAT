@@ -3,14 +3,14 @@ import pytest
 from jobs.data_pipeline import DataPipeline
 from deep_learning.training.training_preparation import TrainingPreparation
 
-class TestTrainingPreparation:
+class TestTrainingPreparationAndData:
 
     @pytest.fixture
     def eclipse_test_dataset(self):
         dataset = 'eclipse_test'
         domain = 'eclipse_test'
         COLAB = ''
-        PREPROCESSING = 'bert'
+        PREPROCESSING = 'fake'
         pipeline = DataPipeline(dataset, domain, COLAB, PREPROCESSING)
         pipeline.run()
         return pipeline
