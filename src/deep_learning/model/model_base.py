@@ -11,3 +11,6 @@ class ModelBase(keras.Model):
 
     def compute_output_shape(self, input_shape):
          return input_shape
+
+    def get_model(self):
+        return self.model

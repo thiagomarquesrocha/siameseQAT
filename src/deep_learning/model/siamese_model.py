@@ -5,7 +5,6 @@ from deep_learning.model.model_base import ModelBase
 class SiameseModel(ModelBase):
 
     def __init__(self, model_name, input_list, model_list):
-        
         # Inputs
         for key, obj in input_list.items():
             obj['input'] = Input(shape = (obj['input_size'], ), name = key) 

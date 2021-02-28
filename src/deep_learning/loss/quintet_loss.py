@@ -1,5 +1,5 @@
-import tensorflow as tf
 import keras
+import tensorflow as tf
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.framework import dtypes
@@ -11,8 +11,9 @@ from deep_learning.loss.pairwise_loss import pairwise_distance, \
 
 class QuintetWeights(Layer):
 
-    def __init__(self, output_dim, **kwargs):
+    def __init__(self, output_dim, trainable=False, **kwargs):
         self.output_dim = output_dim
+        self.trainable = trainable
         super(QuintetWeights, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -20,7 +21,7 @@ class QuintetWeights(Layer):
         self.kernel = tf.reshape(self.add_weight(name='quintet_kernel_weight', 
                                       shape=(input_shape[0], self.output_dim),
                                       initializer=keras.initializers.Ones(),
-                                      trainable=False), (1, 1))
+                                      trainable=self.trainable), (1, 1))
         super(QuintetWeights, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
@@ -186,7 +187,7 @@ def quintet_trainable(inputs):
 def quintet_loss_output(y_true, y_pred):
     return tf.reduce_mean(y_pred[0])
 
-def TL_w_anchor(y_true, y_pred):
+def TL_w(y_true, y_pred):
     return tf.reduce_mean(y_pred[1])
 
 def TL_w_centroid(y_true, y_pred):

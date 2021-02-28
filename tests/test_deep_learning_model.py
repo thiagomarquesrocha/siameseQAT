@@ -4,9 +4,27 @@ import keras
 from deep_learning.model.bert_model import BERTModel
 from deep_learning.model.mlp_model import MLPModel
 from deep_learning.model.siamese_model import SiameseModel
+from deep_learning.model.siameseQA_model import SiameseQAModel
+from deep_learning.model.compile_model import compile_model
 
-class TestDeepLearningModels:
+class TestDeepLearningModel:
     
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
+    def test_create_siameseQA_A_model_then_successful(self):
+        model = SiameseQAModel(model_name='SiameseQA-A', title_size=1, desc_size=1, 
+                                categorical_size=1, number_of_BERT_layers=1, 
+                                    trainable=False)
+        compile_model(model)
+        assert model != None
+
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
+    def test_create_siameseQA_W_model_then_successful(self):
+        model = SiameseQAModel(model_name='SiameseQA-W', title_size=1, desc_size=1, 
+                                categorical_size=1, number_of_BERT_layers=1, 
+                                    trainable=True)
+        compile_model(model)
+        assert model != None
+
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_siamese_model_then_successful(self):
         keras.backend.clear_session()
@@ -54,10 +72,10 @@ class TestDeepLearningModels:
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_bert_model_then_successful(self):
-        model = BERTModel(seq_len=20, model_name='FeatureBERTModel', number_of_layers=1)
+        model = BERTModel(seq_len=1, model_name='FeatureBERTModel', number_of_layers=1)
         model.compile(optimizer="Adam", loss="mse")
         assert model != None
-
+    
     def test_create_mlp_model_then_successful(self):
         model = MLPModel(input_size=10, input_name="FeatureBugInput", model_name='FeatureMLPModel')
         model.compile(optimizer="Adam", loss="mse")
