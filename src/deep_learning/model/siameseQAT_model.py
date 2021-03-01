@@ -24,7 +24,7 @@ class SiameseQA():
         TL_loss = Lambda(quintet_loss, name='quintet_loss')(model.output)
     
         tl_l = Lambda(lambda x:tf.reshape(x[0], (1,)), name='TL')(TL_loss)
-        tl_l_c = Lambda(lambda x:tf.reshape(x[1], (1, )), name='TL_centroid')(TL_loss)
+        tl_l_c = Lambda(lambda x:tf.reshape(x[1], (1,)), name='TL_centroid')(TL_loss)
         
         TL_w = QuintetWeights(output_dim=1, trainable=trainable)(tl_l)
         TL_centroid_w = QuintetWeights(output_dim=1, trainable=trainable)(tl_l_c)

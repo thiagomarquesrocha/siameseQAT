@@ -1,4 +1,5 @@
 from deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
+from deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
 from deep_learning.training.training_preparation import TrainingPreparation
 from deep_learning.model.compile_model import compile_model
 import math
@@ -46,6 +47,15 @@ class Train():
                         categorical_size=self.MAX_LENGTH_CATEGORICAL,
                         topic_size=self.TOPIC_LENGTH,
                         number_of_BERT_layers=self.BERT_LAYERS)
+        elif model == 'SiameseQA-A':
+            self.model = SiameseQA(model_name=model,
+                                    title_size=self.MAX_SEQUENCE_LENGTH_T, 
+                                    desc_size=self.MAX_SEQUENCE_LENGTH_D, 
+                                    categorical_size=self.MAX_LENGTH_CATEGORICAL,
+                                    number_of_BERT_layers=self.BERT_LAYERS,
+                                    trainable=False)
+            # This model does not uses topic feature
+            self.TOPIC_LENGTH = 0
 
         self.model = compile_model(self.model)
 
@@ -76,12 +86,33 @@ class Train():
         logger.debug("Train finished!")
 
     def get_epoch_result(self, epoch, **kwargs):
-        if self.MODEL_NAME == 'SiameseTA' or 
+        if self.MODEL_NAME == 'SiameseTA' or \
             self.MODEL_NAME == 'SiameseTAT':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             return "Epoch: {} - Loss: {:.2f}, Loss_test: {:.2f}".format(epoch, h, h_validation)
-
+        if self.MODEL_NAME == 'SiameseQA-A':
+            h = kwargs.get('h')
+            h_validation = kwargs.get('h_validation')
+            train_tl_w = h[1]
+            train_tl_w_centroid = h[2]
+            train_tl = h[3]
+            train_tl_centroid = h[4]
+            validation_tl_w = h_validation[1]
+            validation_tl_w_centroid = h_validation[2]
+            validation_tl = h_validation[3]
+            validation_tl_centroid = h_validation[4]
+            return ("Epoch: {} " + 
+              "Train - Loss: {:.2f}, " +
+              "TL_w: {:.2f}, TL_centroid_w: {:.2f}, " + 
+              "TL: {:.2f}, TL_centroid: {:.2f}\n" +
+              "Validation - Loss_test: {:.2f}, " +
+              "TL_w: {:.2f}, TL_centroid_w: {:.2f}, " + 
+              "TL: {:.2f}, TL_centroid: {:.2f}").format(epoch, h[0], 
+                                                train_tl_w, train_tl_w_centroid, 
+                                                train_tl, train_tl_centroid,
+                                                h_validation[0], validation_tl_w, validation_tl_w_centroid, 
+                                                validation_tl, validation_tl_centroid,)
         return "Epoch: {}".format(epoch)
     def prepare_data(self):
         
