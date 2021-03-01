@@ -10,7 +10,8 @@ class Train():
 
     def __init__(self, MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                 MAX_SEQUENCE_LENGTH_T=10, MAX_SEQUENCE_LENGTH_D=100,
-                BERT_LAYERS = 8, EPOCHS=10, BATCH_SIZE=64, BATCH_SIZE_TEST=128):
+                TOPIC_LENGTH=30, BERT_LAYERS = 8, EPOCHS=10, 
+                BATCH_SIZE=64, BATCH_SIZE_TEST=128):
         self.MODEL_NAME = MODEL_NAME
         self.EPOCHS = EPOCHS
         self.BATCH_SIZE = BATCH_SIZE
@@ -20,6 +21,7 @@ class Train():
         self.PREPROCESSING = PREPROCESSING # bert, baseline or fake
         self.DIR = DIR
         self.TOKEN_END = 102 # TODO: Read from BERT pretrained
+        self.TOPIC_LENGTH = TOPIC_LENGTH
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
         self.BERT_LAYERS = BERT_LAYERS # MAX 12 layers
@@ -34,6 +36,15 @@ class Train():
                         title_size=self.MAX_SEQUENCE_LENGTH_T, 
                         desc_size=self.MAX_SEQUENCE_LENGTH_D, 
                         categorical_size=self.MAX_LENGTH_CATEGORICAL,
+                        number_of_BERT_layers=self.BERT_LAYERS)
+            # This model does not uses topic feature
+            self.TOPIC_LENGTH = 0
+        elif model == 'SiameseTAT':
+            self.model = SiameseTAT(model_name=model, 
+                        title_size=self.MAX_SEQUENCE_LENGTH_T, 
+                        desc_size=self.MAX_SEQUENCE_LENGTH_D, 
+                        categorical_size=self.MAX_LENGTH_CATEGORICAL,
+                        topic_size=self.TOPIC_LENGTH,
                         number_of_BERT_layers=self.BERT_LAYERS)
 
         self.model = compile_model(self.model)
@@ -104,21 +115,23 @@ class Train():
                                                                             bug_ids,
                                                                             batch_size_test,
                                                                             issues_by_buckets)
-        if self.MODEL_NAME == 'SiameseTA':
-            validation_sample = [valid_input_sample['info'], 
-                                valid_input_sample['description']['segment'], 
-                                valid_input_sample['description']['token'],
-                                valid_input_sample['title']['segment'], 
-                                valid_input_sample['title']['token'],
-                                valid_sim]
-
-        else:
-            validation_sample = [valid_input_sample['info'], 
-                                valid_input_sample['description']['segment'],
-                                valid_input_sample['description']['token'],
-                                valid_input_sample['title']['segment'],
-                                valid_input_sample['title']['token'],
-                                valid_input_sample['topics'],
-                                valid_sim]
+        validation_sample = []
+        # Add Categorical
+        if self.MAX_LENGTH_CATEGORICAL > 0:
+            validation_sample.append(valid_input_sample['info'])
+        # Add Desc
+        if self.MAX_SEQUENCE_LENGTH_D > 0:
+            validation_sample.append(valid_input_sample['description']['segment'])
+            validation_sample.append(valid_input_sample['description']['token'])
+        # Add Title
+        if self.MAX_SEQUENCE_LENGTH_T > 0:
+            validation_sample.append(valid_input_sample['title']['segment'])    
+            validation_sample.append(valid_input_sample['title']['token'])
+        # Add Topic
+        if self.TOPIC_LENGTH > 0:
+            validation_sample.append(valid_input_sample['topics'])
+        
+        # Add Label
+        validation_sample.append(valid_sim)
             
         return batch_triplets_valid, valid_input_sample, valid_sim, validation_sample

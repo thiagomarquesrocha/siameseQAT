@@ -42,6 +42,8 @@ $ set PYTHONPATH=src # Windows
 
 **Run tests**
 
+To run all tests you will need BERT pretrained uncased (uncased_L-12_H-768_A-12)[https://github.com/google-research/bert/blob/master/README.md]. Download and unpack on root directory.
+
 ```
 $ pipenv run pytest tests
 ```
