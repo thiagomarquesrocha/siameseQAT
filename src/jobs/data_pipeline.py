@@ -116,7 +116,7 @@ class DataPipeline:
 
         # Split into train/test
         Splitter.split_train_test(self.DIR_OUTPUT, self.TRAIN_OUTPUT, 
-                                    self.TEST_OUTPUT, bug_pairs, 
+                                    self.TEST_OUTPUT, buckets, 
                                         self.VALIDATION_SPLIT)
 
         # Transformation config

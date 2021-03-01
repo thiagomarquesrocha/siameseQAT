@@ -26,10 +26,13 @@ class Train():
         self.MAX_SEQUENCE_LENGTH_T = MAX_SEQUENCE_LENGTH_T
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
         self.BERT_LAYERS = BERT_LAYERS # MAX 12 layers
+
+    def run(self):
         self.prepare_data()
         self.prepare_validation_data()
-        self.create_model(MODEL_NAME)
+        self.create_model(self.MODEL_NAME)
         self.train_model()
+        return self
 
     def create_model(self, model):
         if model == 'SiameseTA':
@@ -38,8 +41,6 @@ class Train():
                         desc_size=self.MAX_SEQUENCE_LENGTH_D, 
                         categorical_size=self.MAX_LENGTH_CATEGORICAL,
                         number_of_BERT_layers=self.BERT_LAYERS)
-            # This model does not uses topic feature
-            self.TOPIC_LENGTH = 0
         elif model == 'SiameseTAT':
             self.model = SiameseTAT(model_name=model, 
                         title_size=self.MAX_SEQUENCE_LENGTH_T, 
@@ -47,15 +48,13 @@ class Train():
                         categorical_size=self.MAX_LENGTH_CATEGORICAL,
                         topic_size=self.TOPIC_LENGTH,
                         number_of_BERT_layers=self.BERT_LAYERS)
-        elif model == 'SiameseQA-A':
+        elif model == 'SiameseQA-A' or model == 'SiameseQA-W':
             self.model = SiameseQA(model_name=model,
                                     title_size=self.MAX_SEQUENCE_LENGTH_T, 
                                     desc_size=self.MAX_SEQUENCE_LENGTH_D, 
                                     categorical_size=self.MAX_LENGTH_CATEGORICAL,
                                     number_of_BERT_layers=self.BERT_LAYERS,
-                                    trainable=False)
-            # This model does not uses topic feature
-            self.TOPIC_LENGTH = 0
+                                    trainable=model == 'SiameseQA-W')
 
         self.model = compile_model(self.model)
 
@@ -86,12 +85,11 @@ class Train():
         logger.debug("Train finished!")
 
     def get_epoch_result(self, epoch, **kwargs):
-        if self.MODEL_NAME == 'SiameseTA' or \
-            self.MODEL_NAME == 'SiameseTAT':
+        if self.MODEL_NAME == 'SiameseTA' or self.MODEL_NAME == 'SiameseTAT':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             return "Epoch: {} - Loss: {:.2f}, Loss_test: {:.2f}".format(epoch, h, h_validation)
-        if self.MODEL_NAME == 'SiameseQA-A':
+        if self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             train_tl_w = h[1]
@@ -115,6 +113,9 @@ class Train():
                                                 validation_tl, validation_tl_centroid,)
         return "Epoch: {}".format(epoch)
     def prepare_data(self):
+        # These models do not use topic feature
+        if self.MODEL_NAME == 'SiameseTA' or self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W':
+            self.TOPIC_LENGTH = 0
         
         self.train_preparation = TrainingPreparation(self.DIR, self.DOMAIN, 
                                         self.PREPROCESSING,

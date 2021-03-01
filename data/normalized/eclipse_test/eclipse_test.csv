@@ -170,3 +170,327 @@ not yet fully implemented.
 remove the it until VCM 
 	implementations for VSS, DAV, ... are being done and determine that 
 they need the behaviour.",[],P5,Platform,INVALID,API - IResource.setLocal has problems (1G5TC8L),2.0
+7,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2005-05-06 17:18:53 -0400,"The platform is able to notify people that a resource was moved using resource
+change events (deltas).  It does not track copies.
+In neither case is it easy for a VCM or target to retain the semantics of a move
+or copy since by the time it is run, all it has it the current state (i.e., it can tell 
+that a file was deleted and another added but not that this was a move).
+This is unfortunate since the VCM/target sync code may well be able to do
+optimizations if this information was available.
+
+NOTES:
+
+JM (12/10/2000 2:49:42 PM)
+	This is related to 
+		1G5RAC5: ITPCORE:WINNT - move/copy semantics not preserved for VCM/targets
+	It is only relevant to address non-local move/copy if the above PR is addressed.  
+	otherwise, there is nothing to do at release time since there is no local copy and all
+	we can do is put/delete.
+
+JM (4/15/2001 9:54:43 PM)
+	There is nothing we can do about this now.  Moving to VCM for logging as a future
+	issue.",6,P5,Platform,WONTFIX,[Team API] move/copy semantics not preserved for VCM/targets (1G5RAC5),2.0
+5,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2008-08-15 08:04:36 -0400,"For getting/setting the managed state of a resource, the methods are:
+
+isManaged(resource) and
+manage(resource)
+
+for getting/setting the ignore state, the methods are:
+
+getIgnored(resource)
+setIgnored(resource)
+
+These should be made more consistent.  I suggest renaming ignore methods:
+
+isIgnored(resource) and
+ignore(resource).
+
+I think it's good practice to not use ""get"" and ""set"" in method names unless it's really
+just a field accessor.
+
+NOTES:",[],P3,Platform,WONTFIX,ISharingManager sharing API inconsistent (1GAUL8H),2.0
+9,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2001-10-23 23:39:17 -0400,"The implementation has to be changed because a root resource might be passed
+	where an IResource is expected. See also 1G8435U
+
+NOTES:
+
+KM (4/26/01 3:54:24 PM)
+	This PR is very old.  It should either be fixed, moved to future, or obsolete.",5,P3,Platform,WONTFIX,VCM Implementation - disallow root resource to be passed (1G8436G),2.0
+10,normal,VERIFIED,Team,2001-10-10 21:34:00 -0400,2008-10-10 18:47:42 -0400,"There seems to be a need for a VCM Event notification model, along the lines
+of the activity notification and resource change notification.  This would only
+notify listeners when local VCM API had been manipulated, it wouldn't notify
+changes that have occurred on the server.  For example, notification of the
+following events (and possibly others) would greatly improve my ability to
+maintain a well refreshed UI:
+
+- repository creation/deletion
+- team stream creation/deletion
+- team stream lock/unlock
+- setSharing of project to team stream
+- project version creation/deletion
+- catchup/release to/from team stream
+
+Without such a notification method, we're left with a LotusNotesian ""Press F9
+to refresh"" UI model. For example, the user has a view open that shows a list
+of the currently known team streams.  The user then creates a new team stream.
+S/he will then have to press F9 on the team stream view to make it include the
+TS they've just created.  We cannot link the team stream creation wizard and the
+team stream view at the UI level, because they might well have been created by
+different plugins that don't know about each other.
+
+Also, repository deletion is not currently supported.  By deletion I mean removal
+of the repository from the list of the workspace's known repositories.  Once the
+known repositories list is persistent, there will be a need to remove items from
+the list to prevent it from growing indefinitely.
+
+NOTES:
+
+BB (2/1/01 11:57:12 AM)
+	For a first cut, see
+		>IVCMEvent 0.4 000
+		>IVCMListener 0.4 000
+		>IVCMProvider 0.3 010
+
+JA 2/1/01
+Some possible additional event types:
+
+- change in resource transience.
+ -create/delete project version
+
+As a side note, you might consider using IVCMListener.handleEvent
+instead of IVCMListener.vcmEvent.  It is more in line with other event/listener
+pairs in Eclipse.
+
+BB (2/2/01 2:51:14 PM)
+	We should change IActivityListener.activityEvent too. (-> IActivityListener.handleEvent)
+
+KM (4/6/01 12:13:55 PM)
+	Prioritization:
+	Important:
+	- update labels (navigator) and property sheets when loading/versioning (explicit refresh)
+	- update sync info on resource change (vcm provider becomes a delta listener)
+	- update prop sheet when change in sharing
+
+	Nice to have but can be dropped:
+	- show creation of new repo connections, streams
+	- update repo stream children when releasing
+	- update version list when versioning
+
+BB (5/11/2001 12:29:33 PM)
+	Implemented events for creation/deletion of repositories/team streams.
+
+JohnA (5/11/2001 6:24:49 PM)
+	Implemented event listening for creation/deletion of repositories/team streams.",[],P3,Platform,FIXED,API - VCM event notification (1G8G6RR),2.0
+14,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2001-10-18 16:15:59 -0400,"KM (4/5/01 8:53:30 PM)
+
+This is arguably not stop ship and could be dropped from June release.
+
+These appear to be the important file:
+	CVS/Entries (and possible friends)
+	CVS/Repository 
+	CVS/Root
+	CVS/Tag
+
+See 
+	http://cvsbook.red-bean.com/cvsbook.html#Working_Copy_Files
+for purpose and contents of these files.
+
+If we don't have them, you won't be able to run a CVS tool against our local files in the workbench.
+However, maintaining these files is a problem since it duplicates information we are already
+storing using Core mechanisms (eg. version/sync info).  
+
+Problems:
+
+1. Keeping these files up to date due to changes in Eclipse
+2. Reading them in order to keep up with changes by an external tool
+3. Ensuring we are using the correct format (testing)
+
+Q: what happens with migration to/from other repository types (eg. CC <-> CVS)
+
+NOTES:
+
+KM (4/10/01 11:52:24 AM)
+	Moving to Future.  For June delivereable we will not support 3rd party CVS tools over our workbench files.
+	Discussed with both John W. and Dave T.
+
+Jean-Michel (14/06/2001 4:08:20 PM)
+	Add to readme.",10,P3,Platform,WONTFIX,README - Cannot run CVS command line client in Eclipse generated workspace (1GB0CJU),2.0
+12,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2001-10-23 23:39:24 -0400,"Currently every new resource added to a shared (version controlled) project is 
+managed. In
+the real world this won't work since most derived artifacts from an active 
+developed project
+will never be managed (e.g. class files, object files, user configuration 
+files...).
+
+The VCM API has ISharingManager::manage() and isManaged() operations. The UI 
+should
+provide support for managing resources. By default resources would be 
+unmanaged, even
+if parent is managed and project is shared. A policy could be added to allow 
+new resources
+created with the UI (e.g. and not generated by the build process) to be managed 
+automatically.
+
+NOTES:
+
+KM (4/12/01 6:37:32 PM)
+	From discussion with Jean-Michel, still feels like we need to close on 
+whether they are hints or more.",[],P3,Platform,WONTFIX,Manage/unmanage support and policies (1GALAEG),2.0
+13,normal,VERIFIED,Team,2001-10-10 21:34:00 -0400,2001-10-29 16:51:09 -0500,"Would it make sense to have a (the?) project's ""Version"" menu on its popup in a 
+stream
+(in the repo explorer)? 
+
+NOTES:
+
+Jean-Michel (22/03/2001 8:29:49 AM)
+
+""Tagging affects the repository, not the working copy. That begs 
+the question: Why require a working copy at all when tagging? The only
+purpose that it serves is to designate which project and which
+revisions of the various files in the project are being tagged. If you could 
+specify the project and revisions independently of the working copy, 
+no working copy would be necessary. "" from CVS manual.
+
+CVS can tag (take workspace revisions and tag then in the repo) and 
+rtag (no workspace required, take repo revisions and tag. This command
+is mostly always used when branching 'cvs rtag -b -r version1 version1_bugfix' 
+so you don't tag the team stream but ). Currently we version using 
+rtag just because rtag records a tag event in the history and allows 
+us to query for existing tags. But using rtag on the team stream (HEAD) is 
+dangerous because you don't really know what you are tagging.
+
+Notes:
+- in our cvs adapter we must use tag where we currently use rtag.
+- to find the versions created with tag in the repo the only thing to do (as 
+recommended by the CVS docs): 
+
+""Until then, there are workarounds. You can run cvs log -h and read the 
+sections of the output following the header symbolic names:.""
+
+but how do we chose which file to look into, it could be a file that has just 
+been added to the repo?
+- we must allow the user to enter his own tag name where ever he can select a 
+version.
+- we could use rtag internally when branching (creating a new team stream) 
+based on a version.
+
+BB (26/03/2001 10:31:40 AM)
+	I think we should provide two operations: Create a project version from 
+a team stream,
+	and create a project version from the workspace. The API has both 
+operations:
+	ISharingManager.createProjectVersion()
+	ITeamStream.createProjectVersion()
+	The first one should be on the context menu for projects in the 
+navigator, the second one
+	on the context menu for projects in team streams (repository explorer).
+	CVS has both operations too.
+
+from Jean-Michel's comment: ""- in our cvs adapter we must use tag where we 
+currently use rtag.""
+	I disagree. I think we need both because CVS provides both too.
+
+KM (3/26/01 2:23:40 PM)
+	Supporting both makes for a very confusing user model.  Versioning from 
+the workspace is closer
+	to VAJ and is arguably better since you have a fixed state that you are 
+versioning
+	(as opposed to trying to version a non-locking changing stream).
+
+KM (4/4/01 4:36:51 PM)
+	Decision is to support both.  Versioning stream is helpful for 
+baselining before releasing.
+	Must make the distinction clear in the UI.  As a bonus, informing the 
+user that he his
+	workspace differs from the stream when versioning the stream may be 
+helpful.
+
+JohnA (4/6/01 5:20:27 PM)
+	Added team stream versioning to the UI.  Moving the PR to active so we 
+don't
+	loose Mark's useful comments above.",12,P3,Platform,FIXED,CC Discussion: local versioning (1GAT3PL),2.0
+11,normal,RESOLVED,Team,2001-10-10 21:34:00 -0400,2001-10-23 23:39:22 -0400,"Jean-Michel (08/02/2001 1:38:48 PM)
+
+The ISharingManager::load operation does not support the following scenario:
+
+- Create project in workbench called TomCat3.3 and share a teamstream with a 
+vcm project called TomCat with version 3.3.
+- Create another project in workbench called TomCat4.0 and share 
+with same tream stream and same project TomCat but with version 4.0 of the 
+project.
+
+This issue can be more generally seen as being about the semantics of ""projects""
+in the workbench versus those in vcm. Projects in the workbench should be 
+allowed
+open mapping to any vcm project, regardless of the name of the local workbench 
+project
+that is chosen. This is similar to ClearCase's and CVS's notion of having any 
+number
+of local work areas for a project configuration. In ClearCase these are called 
+views, and you 
+can have as many as you like. Likewise, in CVS you can use the -d option with 
+the 
+update command to load a specific module version to a user named directory (the 
+default
+is to use the module's name).
+
+The load API mentions that it is responsible for renames. If this is the case 
+then if
+projects are to be threated differently, an alternative method should be 
+available for
+renaming projects on the server. Local projects, or workbench projects, could be
+renamed without affecting the repository project to which it is mapped. 
+
+
+NOTES:
+
+JM (08/02/2001 7:56:47 PM)
+	Yes.  Currently there is an (at least underlying) assumption that the 
+name of a 
+	project in the workspace is the same as its name in the versioning 
+system.  This
+	should be relaxed.
+	Moving to BB for consideration.",[],P3,Platform,WONTFIX,API: ISharingManager::load mapping vcm projects to workspace projects (1G8U50U),2.0
+15,normal,RESOLVED,Team,2001-10-10 21:35:00 -0400,2001-10-31 14:05:37 -0500,"In support of some of the VCM CVS work we need an SSH implementation that we can use.  There are
+two basic options, Java client implementation, native C implementation.  The native C story has 
+the standard drawbacks of having to spawn an external process and manage the standard in/standard
+out.  The Java approach would be more closely integrated but may suffer in performance and 
+flexibility due to Java's inferiour socket implementation.  
+
+NOTES:
+
+JM (18/04/2001 5:21:19 PM)
+	There are also licensing issues.  many of the public implemenations are GPL.  This may or may not
+	be an issue.  A good place to start looking is http://www.openssh.org.  The SSH Plugin Java implementation
+	is likely to be the most promising of the Java guys.
+
+	To test/investigate this area we need an SSH enabled Linux box.  
+
+	Moving to JEP for investigation
+
+JEP (4/24/01 3:49:53 PM)
+	Here is what I've done so far:
+
+	1. Installed openssh-2.5.2p2 (includes linux ssh client and server) on dj.
+	2. Logged on to dj from dj using linux ssh client.
+	3. Installed the Java Telnet Application 2.0 (includes java ssh client plugin) on pico1.
+	4. Logged on to dj from pico1 using the JTA ssh client plugin.
+
+	I used the default options and configurations whenever possible.
+
+JohnA (10/2/2001 5:02:53 PM)
+	Assuming this is resolved. Moving to VCM for confirmation/close.",11,P3,Platform,INVALID,SSH investigation (1GCEDG2),2.0
+17,normal,RESOLVED,Team,2001-10-10 21:35:00 -0400,2002-05-23 21:20:53 -0400,"We need to look at gender change cases, where at a given path
+		- the workspace has a file but the team stream has a folder
+		- the workspace has a folder but the team stream has a file
+
+NOTES:
+
+BB (06/04/2001 10:03:58 AM)
+	Currently, the implementation does not cover these cases. It assumes that the resource types
+	match.
+
+KM (4/6/01 5:11:46 PM)
+	This case occurs when on machine A you release folder Foo and on machine B you try to release resource Foo.
+	Unlikely and CVS doesn't handle well anyway.
+	We should test to ensure we are not failing bad (eg. Null Ptr Ex).",15,P5,Platform,FIXED,look at gender change cases (1GBCX61),2.0

@@ -2,6 +2,7 @@ import os
 import _pickle as pickle
 import numpy as np
 from tqdm import tqdm
+from utils.splitter import Splitter
 
 class TrainingData:
 
@@ -104,16 +105,8 @@ class TrainingData:
             self.save_object(DIR, 'dup_sets_test', self.dup_sets_test)
             self.save_object(DIR, 'bug_ids', self.bug_ids)
 
-    def get_buckets_for_bugs(self):
-        issues_by_buckets = {}
-        for bucket in tqdm(self.buckets):
-            issues_by_buckets[bucket] = bucket
-            for issue in np.array(self.buckets[bucket]).tolist():
-                issues_by_buckets[issue] = bucket
-        return issues_by_buckets
-
     def prepare_buckets_for_bugs(self):
-        self.issues_by_buckets = self.get_buckets_for_bugs()
+        self.issues_by_buckets = Splitter.get_buckets_for_bugs(self.buckets)
 
     def get_train_ids(self, train_data):
         bug_train_ids = []

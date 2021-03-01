@@ -5,6 +5,7 @@ tqdm==4.26.0
 keras-bert==0.81.1
 keras-transformer==0.33.0
 tensorflow==1.15.0
+tensorflow-gpu==1.12.0
 keras==2.2.4
 numpy==1.18.1
 matplotlib==3.0.0
