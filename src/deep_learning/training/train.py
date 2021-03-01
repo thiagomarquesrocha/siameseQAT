@@ -76,7 +76,8 @@ class Train():
         logger.debug("Train finished!")
 
     def get_epoch_result(self, epoch, **kwargs):
-        if self.MODEL_NAME == 'SiameseTA':
+        if self.MODEL_NAME == 'SiameseTA' or 
+            self.MODEL_NAME == 'SiameseTAT':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             return "Epoch: {} - Loss: {:.2f}, Loss_test: {:.2f}".format(epoch, h, h_validation)
