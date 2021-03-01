@@ -21,6 +21,34 @@ class TrainingData:
         with open(os.path.join(DIR, DOMAIN + '_buckets.pkl'), 'rb') as f:
             self.buckets = pickle.load(f)
 
+    def get_info_dict(self, DIR, DOMAIN):
+
+        if DOMAIN != 'firefox':
+            self.info_dict = {
+                'bug_severity' : self.get_feature_size(DIR, 'bug_severity'),
+                'product' : self.get_feature_size(DIR, 'product'),
+                'bug_status' : self.get_feature_size(DIR, 'bug_status'),
+                'component' : self.get_feature_size(DIR, 'component'),
+                'priority' : self.get_feature_size(DIR, 'priority'),
+                'version' : self.get_feature_size(DIR, 'version')
+            }
+        else:
+            self.info_dict = {
+                'bug_status' : self.get_feature_size(DIR, 'bug_status'),
+                'component' : self.get_feature_size(DIR, 'component'),
+                'priority' : self.get_feature_size(DIR, 'priority'),
+                'version' : self.get_feature_size(DIR, 'version')
+            }
+        self.categorical_size = self.get_categorical_size()
+
+    def get_feature_size(self, DIR, name):
+        with open(os.path.join(DIR, '{}.dic'.format(name)), 'rb') as f:
+            features = str(f.read()).split('\\n')[:-1]
+        return len(features)
+
+    def get_categorical_size(self):
+        return sum([total for total in self.info_dict.values()])
+
     def load_bugs(self, DIR, method, TOKEN_END, MAX_SEQUENCE_LENGTH_T, MAX_SEQUENCE_LENGTH_D):   
         removed = []
         self.bug_set = {}
@@ -36,8 +64,8 @@ class TrainingData:
                 removed.append(bug_id)
         
         # Padding
-        title_padding = self.data_padding(TOKEN_END, title_padding, MAX_SEQUENCE_LENGTH_T, method=method)
-        desc_padding = self.data_padding(TOKEN_END, desc_padding, MAX_SEQUENCE_LENGTH_D, method=method)
+        title_padding = self.data_padding(TOKEN_END, title_padding, MAX_SEQUENCE_LENGTH_T, method)
+        desc_padding = self.data_padding(TOKEN_END, desc_padding, MAX_SEQUENCE_LENGTH_D, method)
         
         for bug_id, bug_title, bug_desc in tqdm(zip(self.bug_ids, title_padding, desc_padding)):
             bug = self.bug_set[bug_id]
@@ -94,8 +122,18 @@ class TrainingData:
             bug_train_ids.append(pair[1])
         return bug_train_ids
 
+    def get_test_ids(self, test_data):
+        bug_test_ids = []
+        for pair in test_data:
+            bug_test_ids.append(pair[0])
+            bug_test_ids.append(pair[1])
+        return bug_test_ids
+
     def load_train_ids(self, train_data):
         self.bug_train_ids = self.get_train_ids(train_data)
+
+    def load_test_ids(self, test_data):
+        self.bug_test_ids = self.get_test_ids(test_data)
 
     @staticmethod
     def read_test_data(data, bug_set, issues_by_buckets, path_test):

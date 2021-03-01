@@ -105,12 +105,12 @@ class DataTransformation:
                 for line in f:
                     bug = json.loads(line)
                     if self.BASE != 'firefox':
-                        bug['product'] = product_dict.get(bug['product'])
-                        bug['bug_severity'] = bug_severity_dict.get(bug['bug_severity'])
-                    bug['priority'] = priority_dict.get(bug['priority'])
-                    bug['version'] = version_dict.get(bug['version'])
-                    bug['component'] = component_dict.get(bug['component'])
-                    bug['bug_status'] = bug_status_dict.get(bug['bug_status'])
+                        bug['product'] = product_dict.get(str(bug['product']))
+                        bug['bug_severity'] = bug_severity_dict.get(str(bug['bug_severity']))
+                    bug['priority'] = priority_dict.get(str(bug['priority']))
+                    bug['version'] = version_dict.get(str(bug['version']))
+                    bug['component'] = component_dict.get((bug['component']))
+                    bug['bug_status'] = bug_status_dict.get(str(bug['bug_status']))
                     bugs.append(bug)
                     loop.update(1)
 
@@ -124,10 +124,8 @@ class DataTransformation:
         bugs_set = {}
         bugs_saved = []
         for bug in tqdm(bugs):
-            #bug = json.loads(line)
-            #print(bug)
             cont+=1
-            if self.PREPROCESSING == 'bert' or self.PREPROCESSING == 'fake':
+            if self.PREPROCESSING == 'bert':
                 ids, segments = self.tokenizer.encode('' if bug['description_original'] == None else bug['description_original'], max_len=self.MAX_SEQUENCE_LENGTH_D)
                 bug['description_token'] = ids
                 bug['description_segment'] = segments
@@ -136,7 +134,7 @@ class DataTransformation:
                 bug['title_segment'] = segments
                 bug.pop('description_original')
                 bug.pop('title_original')
-            else: # BASELINE
+            else: # Baseline or Fake
                 bug['description_token'] = [word_vocab.get(w.encode('utf-8'), UNK) for w in bug['description'].split()]
                 if len(bug['title']) == 0:
                     bug['title'] = bug['description'][:10]

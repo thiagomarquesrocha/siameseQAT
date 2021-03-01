@@ -31,29 +31,23 @@ class TrainingPreparation():
         one_hot[int(float(idx))] = 1
         return one_hot
 
-    def get_test_ids(self, test_data):
-        bug_test_ids = []
-        for pair in test_data:
-            bug_test_ids.append(pair[0])
-            bug_test_ids.append(pair[1])
-        return bug_test_ids
-
     def read_batch_bugs(self, batch, bug, index=-1, title_ids=None, description_ids=None):
+        info_dict = self.get_data().info_dict
         if self.DOMAIN != 'firefox':
             info = np.concatenate((
-                self.to_one_hot(bug['bug_severity'], self.info_dict['bug_severity']),
-                self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
-                self.to_one_hot(bug['component'], self.info_dict['component']),
-                self.to_one_hot(bug['priority'], self.info_dict['priority']),
-                self.to_one_hot(bug['product'], self.info_dict['product']),
-                self.to_one_hot(bug['version'], self.info_dict['version']))
+                self.to_one_hot(bug['bug_severity'], info_dict['bug_severity']),
+                self.to_one_hot(bug['bug_status'], info_dict['bug_status']),
+                self.to_one_hot(bug['component'], info_dict['component']),
+                self.to_one_hot(bug['priority'], info_dict['priority']),
+                self.to_one_hot(bug['product'], info_dict['product']),
+                self.to_one_hot(bug['version'], info_dict['version']))
             )
         else:
             info = np.concatenate((
-                self.to_one_hot(bug['bug_status'], self.info_dict['bug_status']),
-                self.to_one_hot(bug['component'], self.info_dict['component']),
-                self.to_one_hot(bug['priority'], self.info_dict['priority']),
-                self.to_one_hot(bug['version'], self.info_dict['version']))
+                self.to_one_hot(bug['bug_status'], info_dict['bug_status']),
+                self.to_one_hot(bug['component'], info_dict['component']),
+                self.to_one_hot(bug['priority'], info_dict['priority']),
+                self.to_one_hot(bug['version'], info_dict['version']))
             )
         #info.append(info_)
         if('topics' in bug and 'topics' in batch):
@@ -65,7 +59,7 @@ class TrainingPreparation():
             title_ids[index] = [int(v > 0) for v in bug['title_token']]
             description_ids[index] = [int(v > 0) for v in bug['description_token']]
 
-    def batch_iterator(self, buckets, data, bug_ids, batch_size, issues_by_buckets):
+    def batch_iterator(self, bug_set, buckets, data, bug_ids, batch_size, issues_by_buckets):
     
         random.shuffle(data)
 
@@ -86,13 +80,13 @@ class TrainingPreparation():
                 neg = self.get_neg_bug(anchor, 
                                     buckets[issues_by_buckets[anchor]], 
                                         issues_by_buckets, bug_ids)
-                bug_anchor = self.bug_set[anchor]
-                bug_pos = self.bug_set[pos]
-                if neg not in self.bug_set:
+                bug_anchor = bug_set[anchor]
+                bug_pos = bug_set[pos]
+                if neg not in bug_set:
                     continue
                 batch_bugs.append(neg)
                 batch_bugs_neg.append(neg)
-                bug_neg = self.bug_set[neg]
+                bug_neg = bug_set[neg]
                 break
             
             # triplet bug and master
@@ -102,7 +96,7 @@ class TrainingPreparation():
         title_ids = np.full((len(batch_bugs), self.MAX_SEQUENCE_LENGTH_T), 0)
         description_ids = np.full((len(batch_bugs), self.MAX_SEQUENCE_LENGTH_D), 0)
         for i, bug_id in enumerate(batch_bugs):
-            bug = self.bug_set[bug_id]
+            bug = bug_set[bug_id]
             self.read_batch_bugs(batch_features, bug, index=i, 
                                     title_ids=title_ids, 
                                         description_ids=description_ids)
@@ -125,6 +119,7 @@ class TrainingPreparation():
 
     def run(self):
         data = self.get_data()
+        data.get_info_dict(self.DIR, self.DOMAIN)
         data.load_buckets(self.DIR, self.DOMAIN)
         data.load_bug_ids(self.DIR)
         data.load_bugs(self.DIR, self.PREPROCESSING, self.TOKEN_END, 
@@ -132,6 +127,7 @@ class TrainingPreparation():
         data.prepare_buckets_for_bugs()
         data.prepare_dataset(self.DIR, data.issues_by_buckets)
         data.load_train_ids(data.train_data)
+        data.load_test_ids(data.test_data)
 
     def get_data(self):
         return self.training_data

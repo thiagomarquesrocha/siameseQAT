@@ -6,7 +6,7 @@ class TokenizerFake(Tokenizer):
         pass 
 
     def apply(self, text):
-        # Implement any transformation
+        # Implement clean text transformation
         return text
 
     def encode(self, text, max_len):
