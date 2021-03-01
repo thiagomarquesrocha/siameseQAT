@@ -13,7 +13,7 @@ class TestDeepLearningModel:
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_create_siameseTA_model_then_successful(self):
         model = SiameseTA(model_name='SiameseTA', title_size=1, desc_size=1, 
-                                categorical_size=1, topic_size=1, 
+                                categorical_size=1, 
                                 number_of_BERT_layers=1)
         model = compile_model(model)
         assert model.get_layer('categorical') != None
