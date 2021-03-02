@@ -39,6 +39,34 @@ class TestTrainingTrain:
         assert sample[5].shape == expected_batch_size
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
+    def test_train_siameseQAT_A_model_then_successful(self, eclipse_test_dataset):
+        MODEL_NAME = 'SiameseQAT-A'
+        DIR = eclipse_test_dataset.DIR_OUTPUT
+        DOMAIN = 'eclipse_test'
+        PREPROCESSING = 'bert'
+        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+                    MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
+                    TOPIC_LENGTH=0, # TODO: Topic feature missing on pipeline
+                    BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
+
+        model = train.get_model()
+        assert model != None
+
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
+    def test_train_siameseQAT_W_model_then_successful(self, eclipse_test_dataset):
+        MODEL_NAME = 'SiameseQAT-W'
+        DIR = eclipse_test_dataset.DIR_OUTPUT
+        DOMAIN = 'eclipse_test'
+        PREPROCESSING = 'bert'
+        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+                    MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
+                    TOPIC_LENGTH=0, # TODO: Topic feature missing on pipeline
+                    BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
+
+        model = train.get_model()
+        assert model != None
+
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_train_siameseQA_W_model_then_successful(self, eclipse_test_dataset):
         MODEL_NAME = 'SiameseQA-W'
         DIR = eclipse_test_dataset.DIR_OUTPUT
@@ -70,6 +98,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
+        # TODO: Topic disabled because of missing topic feature on pipeline
         train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     TOPIC_LENGTH=0, BERT_LAYERS=1, 

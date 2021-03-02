@@ -55,7 +55,15 @@ class Train():
                                     categorical_size=self.MAX_LENGTH_CATEGORICAL,
                                     number_of_BERT_layers=self.BERT_LAYERS,
                                     trainable=model == 'SiameseQA-W')
-
+        elif model == 'SiameseQAT-A' or model == 'SiameseQAT-W':
+            self.model = SiameseQAT(model_name=model,
+                                    title_size=self.MAX_SEQUENCE_LENGTH_T, 
+                                    desc_size=self.MAX_SEQUENCE_LENGTH_D, 
+                                    categorical_size=self.MAX_LENGTH_CATEGORICAL,
+                                    topic_size=self.TOPIC_LENGTH,
+                                    number_of_BERT_layers=self.BERT_LAYERS,
+                                    trainable=model == 'SiameseQAT-W')
+        
         self.model = compile_model(self.model)
 
     def get_model(self):
@@ -89,7 +97,7 @@ class Train():
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             return "Epoch: {} - Loss: {:.2f}, Loss_test: {:.2f}".format(epoch, h, h_validation)
-        if self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W':
+        if self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W' or self.MODEL_NAME == 'SiameseQAT-A' or self.MODEL_NAME == 'SiameseQAT-W':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
             train_tl_w = h[1]
