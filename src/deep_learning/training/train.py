@@ -1,7 +1,8 @@
 from deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
 from deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
 from deep_learning.training.training_preparation import TrainingPreparation
-from deep_learning.model.compile_model import compile_model
+from deep_learning.model.compile_model import compile_model, get_bug_encoder
+from evaluation.retrieval import Retrieval
 import math
 import logging
 
@@ -64,10 +65,14 @@ class Train():
                                     number_of_BERT_layers=self.BERT_LAYERS,
                                     trainable=model == 'SiameseQAT-W')
         
+        self.loss = self.model.get_loss()
         self.model = compile_model(self.model)
 
     def get_model(self):
         return self.model
+
+    def get_bug_encoder(self):
+        return get_bug_encoder(self.model, self.loss)
 
     def train_model(self):
         logger.debug("Starting training!")

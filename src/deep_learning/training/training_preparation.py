@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from utils.util import Util
 from deep_learning.training.training_data import TrainingData
 
 class TrainingPreparation():
@@ -26,30 +27,9 @@ class TrainingPreparation():
                 neg_bug = random.choice(bug_ids)
         return neg_bug
 
-    def to_one_hot(self, idx, size):
-        one_hot = np.zeros(size)
-        one_hot[int(float(idx))] = 1
-        return one_hot
-
     def read_batch_bugs(self, batch, bug, index=-1, title_ids=None, description_ids=None):
         info_dict = self.get_data().info_dict
-        if self.DOMAIN != 'firefox':
-            info = np.concatenate((
-                self.to_one_hot(bug['bug_severity'], info_dict['bug_severity']),
-                self.to_one_hot(bug['bug_status'], info_dict['bug_status']),
-                self.to_one_hot(bug['component'], info_dict['component']),
-                self.to_one_hot(bug['priority'], info_dict['priority']),
-                self.to_one_hot(bug['product'], info_dict['product']),
-                self.to_one_hot(bug['version'], info_dict['version']))
-            )
-        else:
-            info = np.concatenate((
-                self.to_one_hot(bug['bug_status'], info_dict['bug_status']),
-                self.to_one_hot(bug['component'], info_dict['component']),
-                self.to_one_hot(bug['priority'], info_dict['priority']),
-                self.to_one_hot(bug['version'], info_dict['version']))
-            )
-        #info.append(info_)
+        info = Util.get_info(bug, info_dict, self.DOMAIN)
         if('topics' in bug and 'topics' in batch):
             batch['topics'].append(bug['topics'])
         batch['info'].append(info)

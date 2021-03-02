@@ -2,7 +2,7 @@ from keras.layers import Input, concatenate
 from keras.models import Model
 from keras import backend as K
 from deep_learning.model.model_base import ModelBase
-from collections import OrderedDict
+from utils.util import Util
 import logging
 
 logger = logging.getLogger('SiameseModel')
@@ -19,8 +19,8 @@ class SiameseModel(ModelBase):
             obj['feat'] = obj['model'](model_input)
         
         # Concatenate model features
-        inputs = [tensor['input'] for tensor in OrderedDict(sorted(input_list.items())).values()]
-        cancat_list = [model['feat'] for model in OrderedDict(sorted(model_list.items())).values()]
+        inputs = [tensor['input'] for tensor in Util.sort_dict_by_key(input_list).values()]
+        cancat_list = [model['feat'] for model in Util.sort_dict_by_key(model_list).values()]
         embed = concatenate(cancat_list, name = 'concatenated_{}'.format(model_name))
 
         # input layer for labels

@@ -1,6 +1,8 @@
 import os
+import numpy as np
 from keras_bert import load_vocabulary
 from multiprocessing import Pool
+from collections import OrderedDict
 
 class Util:
 
@@ -98,3 +100,39 @@ class Util:
         token_dict = load_vocabulary(vocab_path)
 
         return config_path, model_path, vocab_path, token_dict
+
+    @staticmethod
+    def save_rank(path, rank):
+        with open(path, 'w') as file_out:
+            for row in rank:
+                file_out.write(row + "\n")
+
+    @staticmethod
+    def sort_dict_by_key(dictionary):
+        return OrderedDict(sorted(dictionary.items()))
+
+    @staticmethod
+    def to_one_hot(idx, size):
+        one_hot = np.zeros(size)
+        one_hot[int(float(idx))] = 1
+        return one_hot
+
+    @staticmethod
+    def get_info(bug, info_dict, DOMAIN):
+        if DOMAIN != 'firefox':
+            info = np.concatenate((
+                Util.to_one_hot(bug['bug_severity'], info_dict['bug_severity']),
+                Util.to_one_hot(bug['bug_status'], info_dict['bug_status']),
+                Util.to_one_hot(bug['component'], info_dict['component']),
+                Util.to_one_hot(bug['priority'], info_dict['priority']),
+                Util.to_one_hot(bug['product'], info_dict['product']),
+                Util.to_one_hot(bug['version'], info_dict['version']))
+            )
+        else:
+            info = np.concatenate((
+                Util.to_one_hot(bug['bug_status'], info_dict['bug_status']),
+                Util.to_one_hot(bug['component'], info_dict['component']),
+                Util.to_one_hot(bug['priority'], info_dict['priority']),
+                Util.to_one_hot(bug['version'], info_dict['version']))
+            )
+        return info
