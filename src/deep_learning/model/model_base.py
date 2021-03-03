@@ -15,3 +15,8 @@ class ModelBase(keras.Model):
 
     def get_model(self):
         return self.model
+
+    def get_config(self):
+        config = {}
+        config.update({ "output_int_shape" : self.output_int_shape})
+        return config

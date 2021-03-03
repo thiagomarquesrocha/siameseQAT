@@ -5,7 +5,7 @@ from deep_learning.training.training_preparation import TrainingPreparation
 
 class TestTrainingPreparationAndData:
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def eclipse_test_dataset(self):
         dataset = 'eclipse_test'
         domain = 'eclipse_test'

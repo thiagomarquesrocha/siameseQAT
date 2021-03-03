@@ -113,6 +113,7 @@ venv.bak/
 data/
 checkpoint/
 logs/
+models/
 modelos/
 resultados/
 uncased_L-12_H-768_A-12/

@@ -1,11 +1,11 @@
 import pytest
 import os
 from jobs.data_pipeline import DataPipeline
-from deep_learning.training.train import Train
+from deep_learning.training.train_retrieval import TrainRetrieval
 
 class TestTrainingTrain:
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def eclipse_test_dataset(self):
         dataset = 'eclipse_test'
         domain = 'eclipse_test'
@@ -20,7 +20,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=1, BATCH_SIZE_TEST=1)
         train.prepare_data()
@@ -44,7 +44,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     TOPIC_LENGTH=0, # TODO: Topic feature missing on pipeline
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
@@ -58,7 +58,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     TOPIC_LENGTH=0, # TODO: Topic feature missing on pipeline
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
@@ -72,7 +72,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
 
@@ -85,7 +85,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     BERT_LAYERS=1, EPOCHS=1, BATCH_SIZE=2, BATCH_SIZE_TEST=2).run()
 
@@ -99,7 +99,7 @@ class TestTrainingTrain:
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
         # TODO: Topic disabled because of missing topic feature on pipeline
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     TOPIC_LENGTH=0, BERT_LAYERS=1, 
                     EPOCHS=2, BATCH_SIZE=1, BATCH_SIZE_TEST=1).run()
@@ -113,7 +113,7 @@ class TestTrainingTrain:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=1, BATCH_SIZE_TEST=1).run()
 

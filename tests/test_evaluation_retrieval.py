@@ -1,12 +1,11 @@
 import pytest
 import os
 from jobs.data_pipeline import DataPipeline
-from deep_learning.training.train import Train
+from deep_learning.training.train_retrieval import TrainRetrieval
 from deep_learning.model.fake_model import FakeModel
 from utils.util import Util
 from evaluation.retrieval import Retrieval
 from evaluation.recall import Recall
-from deep_learning.training.train import Train
 
 class TestEvaluationRetrieval:
 
@@ -26,7 +25,7 @@ class TestEvaluationRetrieval:
         DIR = eclipse_test_dataset.DIR_OUTPUT
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'fake'
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     BERT_LAYERS=1, EPOCHS=2, BATCH_SIZE=1, BATCH_SIZE_TEST=1)
         train.prepare_data()
@@ -144,7 +143,7 @@ class TestEvaluationRetrieval:
         DOMAIN = 'eclipse_test'
         PREPROCESSING = 'bert'
         # TODO: Topic disabled because of missing topic feature on pipeline
-        train = Train(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+        train = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                     MAX_SEQUENCE_LENGTH_T=1, MAX_SEQUENCE_LENGTH_D=1,
                     TOPIC_LENGTH=0, BERT_LAYERS=1, 
                     EPOCHS=2, BATCH_SIZE=1, BATCH_SIZE_TEST=1).run()

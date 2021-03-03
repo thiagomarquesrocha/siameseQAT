@@ -2,7 +2,7 @@ from keras_bert import compile_model, get_model
 from keras_bert import load_trained_model_from_checkpoint
 from keras.layers import Dense, Average, GlobalAveragePooling1D
 from keras.models import Model
-from utils.util import Util
+from utils.bert_utils import BertUtils
 from deep_learning.model.model_base import ModelBase
 
 class BERTModel(ModelBase):
@@ -13,7 +13,7 @@ class BERTModel(ModelBase):
     def __init__(self, seq_len, model_name, number_of_layers=8):
 
         # Load pretrained BERT
-        config_path, model_path, vocab_path, token_dict = Util.pretrained_bert()
+        config_path, model_path, vocab_path, token_dict = BertUtils.pretrained_bert()
 
         model = load_trained_model_from_checkpoint(
             config_path,

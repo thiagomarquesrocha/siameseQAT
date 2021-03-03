@@ -6,9 +6,9 @@ from evaluation.retrieval import Retrieval
 import math
 import logging
 
-logger = logging.getLogger('Train')
+logger = logging.getLogger('TrainRetrieval')
 
-class Train():
+class TrainRetrieval():
 
     def __init__(self, MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
                 MAX_SEQUENCE_LENGTH_T=10, MAX_SEQUENCE_LENGTH_D=100,
@@ -28,14 +28,19 @@ class Train():
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_D
         self.BERT_LAYERS = BERT_LAYERS # MAX 12 layers
 
-    def run(self):
+    def build(self):
         self.prepare_data()
         self.prepare_validation_data()
         self.create_model(self.MODEL_NAME)
+        return self
+
+    def run(self):
+        self.build()
         self.train_model()
         return self
 
     def create_model(self, model):
+        logger.debug("Creating {} model...".format(model))
         if model == 'SiameseTA':
             self.model = SiameseTA(model_name=model, 
                         title_size=self.MAX_SEQUENCE_LENGTH_T, 
@@ -125,6 +130,7 @@ class Train():
                                                 h_validation[0], validation_tl_w, validation_tl_w_centroid, 
                                                 validation_tl, validation_tl_centroid,)
         return "Epoch: {}".format(epoch)
+    
     def prepare_data(self):
         # These models do not use topic feature
         if self.MODEL_NAME == 'SiameseTA' or self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W':
