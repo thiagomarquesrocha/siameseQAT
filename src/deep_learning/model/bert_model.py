@@ -40,4 +40,4 @@ class BERTModel(ModelBase):
         
         model = Model(inputs, outputs, name=model_name)
 
-        super().__init__(model, self.OUTPUT_LAYER)
+        super().__init__(model, self.OUTPUT_LAYER, name=model_name)

@@ -16,14 +16,15 @@ class TestDeepLearningModel:
                                 categorical_size=1, 
                                 number_of_BERT_layers=1)
         model = compile_model(model)
+        print([layer.name for layer in model.layers])
         assert model.get_layer('categorical') != None
         assert model.get_layer('title_token') != None
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('topic') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
@@ -37,9 +38,9 @@ class TestDeepLearningModel:
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('topic') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
@@ -53,9 +54,9 @@ class TestDeepLearningModel:
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('topic') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
         assert model.get_layer('quintet_trainable') != None
 
@@ -70,9 +71,9 @@ class TestDeepLearningModel:
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('topic') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
         assert model.get_layer('quintet_trainable') != None
 
@@ -87,8 +88,9 @@ class TestDeepLearningModel:
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
         assert model.get_layer('quintet_trainable') != None
 
@@ -103,8 +105,9 @@ class TestDeepLearningModel:
         assert model.get_layer('title_segment') != None
         assert model.get_layer('desc_token') != None
         assert model.get_layer('desc_segment') != None
-        assert model.get_layer('mlpmodel_1') != None
-        assert model.get_layer('bertmodel_1') != None
+        assert model.get_layer('categorical_encoder') != None
+        assert model.get_layer('title_encoder') != None
+        assert model.get_layer('description_encoder') != None
         assert model.get_layer('concatenated_bug_embed') != None
         assert model.get_layer('quintet_trainable') != None
 

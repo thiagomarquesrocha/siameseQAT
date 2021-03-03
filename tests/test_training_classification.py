@@ -64,7 +64,8 @@ class TestTrainingClassification:
         train = TrainClassification(retrieval_preload, MODEL_NAME, PRETRAINED_MODEL, 
                     DIR, DOMAIN, PREPROCESSING, EPOCHS=2, 
                     BATCH_SIZE=1, BATCH_SIZE_TEST=1)
-        train.pre_load_model()
+        train.run()
+        # Check preload
         expected_categorical_size = 9
         expected_title_size = 1
         expected_desc_size = 1
@@ -73,3 +74,8 @@ class TestTrainingClassification:
         assert train.DESC_SIZE == expected_desc_size
         assert train.CATEGORICAL_SIZE == expected_categorical_size
         assert train.TOPIC_SIZE == expected_topic_size
+        # Check model
+        model = train.get_model()
+        assert model.get_layer('concatenated_bug_embed') != None
+        assert model.get_layer('bugs') != None
+        assert model.get_layer('softmax') != None

@@ -12,4 +12,4 @@ class MLPModel(ModelBase):
         info_input = Input(shape=(input_size, ), name=input_name)
         model = Dense(self.OUTPUT_LAYER, activation='tanh')(info_input)
         model = Model(inputs=[info_input], outputs=[model], name = model_name)
-        super().__init__(model, self.OUTPUT_LAYER)
+        super().__init__(model, self.OUTPUT_LAYER, name=model_name)

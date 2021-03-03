@@ -20,8 +20,8 @@ class SiameseModel(ModelBase):
         
         # Concatenate model features
         inputs = [tensor['input'] for tensor in Util.sort_dict_by_key(input_list).values()]
-        cancat_list = [model['feat'] for model in Util.sort_dict_by_key(model_list).values()]
-        embed = concatenate(cancat_list, name = 'concatenated_{}'.format(model_name))
+        concat_list = [model['feat'] for model in Util.sort_dict_by_key(model_list).values()]
+        embed = concatenate(concat_list, name = 'concatenated_{}'.format(model_name))
 
         # input layer for labels
         input_labels = Input(shape=(1,), name='input_label')

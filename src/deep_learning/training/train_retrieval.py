@@ -70,7 +70,9 @@ class TrainRetrieval():
                                     number_of_BERT_layers=self.BERT_LAYERS,
                                     trainable=model == 'SiameseQAT-W')
         
+        # Save loss to compile and recovery bug encoder
         self.loss = self.model.get_loss()
+        # Compile model
         self.model = compile_model(self.model)
 
     def get_model(self):

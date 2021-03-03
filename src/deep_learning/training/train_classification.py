@@ -1,5 +1,7 @@
 import logging
 from utils.keras_utils import KerasUtils
+from deep_learning.model.compile_model import compile_model
+from deep_learning.model.siameseQAT_classifier import SiameseQATClassifier
 from deep_learning.training.training_preparation import TrainingPreparation
 
 logger = logging.getLogger('TrainClassification')
@@ -8,7 +10,8 @@ class TrainClassification:
 
     INVALID_INPUT_SIZE = 0
 
-    def __init__(self, model, MODEL_NAME, PRETRAINED_MODEL, DIR, DOMAIN, PREPROCESSING, 
+    def __init__(self, model, MODEL_NAME, 
+                PRETRAINED_MODEL, DIR, DOMAIN, PREPROCESSING, 
                 EPOCHS=10, BATCH_SIZE=64, BATCH_SIZE_TEST=128):
         self.model = model
         self.MODEL_NAME = MODEL_NAME
@@ -25,7 +28,21 @@ class TrainClassification:
     def run(self):
         self.pre_load_model()
         self.prepare_data()
+        self.create_model()
         return self
+
+    def create_model(self):
+        self.model = SiameseQATClassifier(self.model, 
+                            title_size=self.TITLE_SIZE, 
+                            desc_size=self.DESC_SIZE, 
+                            categorical_size=self.CATEGORICAL_SIZE, 
+                            topic_size=self.TOPIC_SIZE)
+
+        # Compile model
+        self.model = compile_model(self.model)
+
+    def get_model(self):
+        return self.model
 
     def prepare_data(self):
         self.train_preparation = TrainingPreparation(self.DIR, 

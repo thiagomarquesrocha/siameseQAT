@@ -2,8 +2,8 @@ import keras
 
 class ModelBase(keras.Model):
     
-    def __init__(self, model, output_int_shape):
-        super(ModelBase, self).__init__()
+    def __init__(self, model, output_int_shape, name=None):
+        super(ModelBase, self).__init__(name=name)
         self.model = model
         self.output_int_shape = output_int_shape
 
@@ -18,5 +18,5 @@ class ModelBase(keras.Model):
 
     def get_config(self):
         config = {}
-        config.update({ "output_int_shape" : self.output_int_shape})
+        config.update({ "model" : self.model, "output_int_shape" : self.output_int_shape})
         return config
