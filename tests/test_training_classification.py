@@ -20,6 +20,7 @@ class TestTrainingClassification:
         return pipeline
 
     @pytest.fixture(scope="class")
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def retrieval_model(self, eclipse_test_dataset):
         MODEL_NAME = 'SiameseTA'
         DIR = eclipse_test_dataset.DIR_OUTPUT
@@ -40,6 +41,7 @@ class TestTrainingClassification:
         del model
         return EPOCHS
 
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_classification_model_preload_then_successful(self, eclipse_test_dataset, retrieval_model):
         # Retrieval
         EPOCHS_TRAINED = retrieval_model
