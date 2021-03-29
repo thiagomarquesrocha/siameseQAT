@@ -1,4 +1,8 @@
-## DeepQL : A Semantic Context-Based Duplicate Bug Report Detection using Replicated Cluster Information
+## SiameseQAT : A Semantic Context-Based Duplicate Bug Report Detection using Replicated Cluster Information
+
+**Paper**: https://ieeexplore.ieee.org/document/9380447
+
+**Abstract**:
 
 In large-scale software development environments, defect reports are maintained through bug tracking systems (BTS) and analyzed by domain experts. Different users may create bug reports in a nonstandard manner, and may report a particular problem using a particular set of words due to stylistic choices
 and writing patterns. 
@@ -8,6 +12,10 @@ duplicates and, therefore, multiple textual descriptions, titles, and categorica
 
 In this work, we propose **SiameseQAT**, a duplicate bug report detection method that considers information on individual bugs as well as information extracted from bug clusters. The SiameseQAT combines context and semantic learning on structured and unstructured features and corpus topic extraction-based features, with a novel loss function called Quintet Loss, which considers the centroid of duplicate clusters and their contextual information. We validated our approach on the well-known open-source software repositories **Eclipse, NetBeans, and Open Office**, comprised of more than **500 thousand bug reports**. We evaluated both the
 retrieval and classification of duplicates, reporting a Recall@25 mean of **85% for retrieval** and **84% AUROC for classification** tasks, results that were significantly superior to previous works.
+
+![SiameseQAT](https://ieeexplore.ieee.org/mediastore_new/IEEE/content/media/6287639/9312710/9380447/rocha4-3066283-small.gif)
+
+![SiameseQAT](https://ieeexplore.ieee.org/mediastore_new/IEEE/content/media/6287639/9312710/9380447/rocha5-3066283-small.gif)
 
 
 ## 1. PREREQUISITES
