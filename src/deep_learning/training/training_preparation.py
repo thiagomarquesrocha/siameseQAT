@@ -39,6 +39,10 @@ class TrainingPreparation():
             title_ids[index] = [int(v > 0) for v in bug['title_token']]
             description_ids[index] = [int(v > 0) for v in bug['description_token']]
 
+    def batch_classification(self):
+        # TODO: Implement batch classification
+        pass
+
     def batch_iterator(self, bug_set, buckets, data, bug_ids, batch_size, issues_by_buckets):
     
         random.shuffle(data)

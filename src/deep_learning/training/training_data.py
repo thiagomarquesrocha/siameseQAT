@@ -9,7 +9,7 @@ class TrainingData:
     def __init__(self):
         pass
 
-    def load_object(self, path):
+    def load_object(self, DIR, path):
         with open(os.path.join(DIR, '{}.pkl'.format(path)), 'rb') as f:
             return pickle.load(f)
     
@@ -90,11 +90,11 @@ class TrainingData:
             raise Exception('self.bug_set not initialized')
 
         try:
-            self.train_data = self.load_object('train_data')
-            self.dup_sets_train = self.load_object('dup_sets_train')
-            self.test_data = self.load_object('test_data')
-            self.dup_sets_test = self.load_object('dup_sets_test')
-            self.bug_ids = self.load_object('bug_ids')
+            self.train_data = self.load_object(DIR, 'train_data')
+            self.dup_sets_train = self.load_object(DIR, 'dup_sets_train')
+            self.test_data = self.load_object(DIR, 'test_data')
+            self.dup_sets_test = self.load_object(DIR, 'dup_sets_test')
+            self.bug_ids = self.load_object(DIR, 'bug_ids')
         except:
             self.train_data, self.dup_sets_train = TrainingData.read_train_data(issues_by_buckets, DIR, list(self.bug_set), path_train)
             self.test_data, self.dup_sets_test = TrainingData.read_test_data(DIR, list(self.bug_set), issues_by_buckets, path_test)
