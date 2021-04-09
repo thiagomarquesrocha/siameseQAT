@@ -10,6 +10,10 @@ class ClassifierBase:
     def __init__(self, model, title_size=0, desc_size=0, 
                     categorical_size=0, topic_size=0):
         model_name = 'bug_classifier'
+
+        # Freeze weights
+        for layer in model.layers:
+            layer.trainable = False
         
         encoder = model.get_layer('concatenated_bug_embed')
         bugs_inputs = []
