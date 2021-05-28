@@ -37,7 +37,7 @@ jobs:
         # if: steps.cache-pipenv.outputs.cache-hit != 'true'
         run: |
           cd /home/runner/work/siameseQAT/siameseQAT
-          pipenv --rm
+          # pipenv --rm
           pipenv install --python 3.5 -r requirements.txt
       - name: Test env
         run: |
