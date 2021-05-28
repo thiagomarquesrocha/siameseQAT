@@ -22,6 +22,21 @@ retrieval and classification of duplicates, reporting a Recall@25 mean of **85% 
 
 Some libraries in python environment are required to enable the source code run properly.
 
+**Download Dataset**
+
+[dataset.rar](https://drive.google.com/file/d/1reRGkmSItk0MJyiefbIjEAEfujAg7JDk/view?usp=sharing)
+
+```
+# Create on root directory /data
+mkdir /data
+# Unrar on root directory /data
+unrar dataset.rar
+# See on data/normalized/
+# - eclipse
+# - openoffice
+# - netbeans
+```
+
 **First, install pipenv**
 
 ```
