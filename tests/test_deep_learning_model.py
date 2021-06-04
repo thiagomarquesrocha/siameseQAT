@@ -1,12 +1,12 @@
 import pytest
 import os
 import keras
-from deep_learning.model.bert_model import BERTModel
-from deep_learning.model.mlp_model import MLPModel
-from deep_learning.model.siamese_model import SiameseModel
-from deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
-from deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
-from deep_learning.model.compile_model import compile_model
+from src.deep_learning.model.bert_model import BERTModel
+from src.deep_learning.model.mlp_model import MLPModel
+from src.deep_learning.model.siamese_model import SiameseModel
+from src.deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
+from src.deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
+from src.deep_learning.model.compile_model import compile_model
 
 class TestDeepLearningModel:
     

@@ -1,7 +1,7 @@
 import random
 import numpy as np
-from utils.util import Util
-from deep_learning.training.training_data import TrainingData
+from src.utils.util import Util
+from src.deep_learning.training.training_data import TrainingData
 
 class TrainingPreparation():
 
@@ -39,15 +39,14 @@ class TrainingPreparation():
             title_ids[index] = [int(v > 0) for v in bug['title_token']]
             description_ids[index] = [int(v > 0) for v in bug['description_token']]
 
-    def batch_classification(self):
-        # TODO: Implement batch classification
-        pass
-
     def batch_iterator(self, bug_set, buckets, data, bug_ids, batch_size, issues_by_buckets):
     
         random.shuffle(data)
 
         batch_features = {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}
+        batch_anchor_features = {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}
+        batch_pos_features = {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}
+        batch_neg_features = {'title' : [], 'desc' : [], 'info' : [], 'topics' : []}
         n_train = len(data)
 
         batch_triplets, batch_bugs_anchor, batch_bugs_pos, batch_bugs_neg, batch_bugs = [], [], [], [], []
@@ -76,7 +75,29 @@ class TrainingPreparation():
             # triplet bug and master
             batch_triplets.append([anchor, pos, neg])
         
-        random.shuffle(batch_bugs)
+        self.fill_batch_features(batch_bugs, batch_features, bug_set)
+        self.fill_batch_features(batch_bugs_anchor, batch_anchor_features, bug_set)
+        self.fill_batch_features(batch_bugs_pos, batch_pos_features, bug_set)
+        self.fill_batch_features(batch_bugs_neg, batch_neg_features, bug_set)
+        
+        sim = np.asarray([issues_by_buckets[bug_id] for bug_id in batch_bugs])
+
+        input_sample, input_anchor, input_pos, input_neg = {}, {}, {}, {}
+
+        input_sample = self.create_batch_feature(batch_features)
+        input_anchor = self.create_batch_feature(batch_anchor_features)
+        input_pos = self.create_batch_feature(batch_pos_features)
+        input_neg = self.create_batch_feature(batch_neg_features)
+
+        return batch_triplets, input_sample, input_anchor, input_pos, input_neg, sim #sim
+
+    def create_batch_feature(self, batch_features):
+        return { 'title' : batch_features['title'], 
+                            'description' : batch_features['desc'], 
+                                'info' : batch_features['info'],
+                                'topics' : batch_features['topics'] }
+
+    def fill_batch_features(self, batch_bugs, batch_features, bug_set):
         title_ids = np.full((len(batch_bugs), self.MAX_SEQUENCE_LENGTH_T), 0)
         description_ids = np.full((len(batch_bugs), self.MAX_SEQUENCE_LENGTH_D), 0)
         for i, bug_id in enumerate(batch_bugs):
@@ -89,17 +110,6 @@ class TrainingPreparation():
         batch_features['desc'] = { 'token' : np.array(batch_features['desc']), 'segment' : description_ids }
         batch_features['info'] = np.array(batch_features['info'])
         batch_features['topics'] = np.array(batch_features['topics'])
-        
-        sim = np.asarray([issues_by_buckets[bug_id] for bug_id in batch_bugs])
-
-        input_sample = {}
-
-        input_sample = { 'title' : batch_features['title'], 
-                            'description' : batch_features['desc'], 
-                                'info' : batch_features['info'],
-                                'topics' : batch_features['topics'] }
-
-        return batch_triplets, input_sample, sim #sim
 
     def run(self):
         data = self.get_data()

@@ -1,5 +1,5 @@
 
-from jobs.data_pipeline import DataPipeline
+from src.jobs.data_pipeline import DataPipeline
 
 def get_colab_value(params):
     try:

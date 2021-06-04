@@ -1,4 +1,4 @@
-from nlp.tokenizer import Tokenizer
+from src.nlp.tokenizer import Tokenizer
 
 class TokenizerBase(Tokenizer):
     

@@ -1,6 +1,6 @@
 from keras.layers import Dense, Dropout, Activation, concatenate
 from keras.models import Model
-from deep_learning.model.classifier_model import ClassifierModel
+from src.deep_learning.model.classifier_model import ClassifierModel
 import numpy as np
 
 class ClassifierBase:

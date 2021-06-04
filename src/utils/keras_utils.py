@@ -1,12 +1,12 @@
 import keras
 import os
 import logging
-from deep_learning.model.model_base import ModelBase
-from deep_learning.model.mlp_model import MLPModel
-from deep_learning.model.bert_model import BERTModel
-from deep_learning.model.siamese_model import SiameseModel
-from deep_learning.training.train_config import TrainConfig
-from deep_learning.loss.quintet_loss import quintet_loss, QuintetWeights, quintet_trainable
+from src.deep_learning.model.model_base import ModelBase
+from src.deep_learning.model.mlp_model import MLPModel
+from src.deep_learning.model.bert_model import BERTModel
+from src.deep_learning.model.siamese_model import SiameseModel
+from src.deep_learning.training.train_config import TrainConfig
+from src.deep_learning.loss.quintet_loss import quintet_loss, QuintetWeights, quintet_trainable
 from keras_bert import get_custom_objects
 from keras.models import load_model as keras_load_model
 

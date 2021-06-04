@@ -1,6 +1,6 @@
-from deep_learning.model.siamese_base_model import SiameseBaseModel
-from deep_learning.model.model_base import ModelBase
-from deep_learning.loss.triplet_loss import triplet_loss_output
+from src.deep_learning.model.siamese_base_model import SiameseBaseModel
+from src.deep_learning.model.model_base import ModelBase
+from src.deep_learning.loss.triplet_loss import triplet_loss_output
 from keras.models import Model
 
 class SiameseTA():

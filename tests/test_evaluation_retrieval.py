@@ -1,11 +1,11 @@
 import pytest
 import os
-from jobs.data_pipeline import DataPipeline
-from deep_learning.training.train_retrieval import TrainRetrieval
-from deep_learning.model.fake_model import FakeModel
-from utils.util import Util
-from evaluation.retrieval import Retrieval
-from evaluation.recall import Recall
+from src.jobs.data_pipeline import DataPipeline
+from src.deep_learning.training.train_retrieval import TrainRetrieval
+from src.deep_learning.model.fake_model import FakeModel
+from src.utils.util import Util
+from src.evaluation.retrieval import Retrieval
+from src.evaluation.recall import Recall
 
 class TestEvaluationRetrieval:
 

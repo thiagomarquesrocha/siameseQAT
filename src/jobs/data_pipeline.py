@@ -5,12 +5,12 @@ import _pickle as pickle
 import logging
 
 from tqdm import tqdm
-from utils.util import Util
-from utils.splitter import Splitter
-from nlp.tokenizer_base import TokenizerBase
-from nlp.tokenizer_bert import TokenizerBert
-from nlp.tokenizer_fake import TokenizerFake
-from transformation.data_transformation import DataTransformation
+from src.utils.util import Util
+from src.utils.splitter import Splitter
+from src.nlp.tokenizer_base import TokenizerBase
+from src.nlp.tokenizer_bert import TokenizerBert
+from src.nlp.tokenizer_fake import TokenizerFake
+from src.transformation.data_transformation import DataTransformation
 
 logger = logging.getLogger('DataPipeline')
 

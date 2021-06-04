@@ -1,8 +1,8 @@
-from deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
-from deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
-from deep_learning.training.training_preparation import TrainingPreparation
-from deep_learning.model.compile_model import compile_model, get_bug_encoder
-from evaluation.retrieval import Retrieval
+from src.deep_learning.model.siameseTAT_model import SiameseTA, SiameseTAT
+from src.deep_learning.model.siameseQAT_model import SiameseQA, SiameseQAT
+from src.deep_learning.training.training_preparation import TrainingPreparation
+from src.deep_learning.model.compile_model import compile_model, get_bug_encoder
+from src.evaluation.retrieval import Retrieval
 import math
 import logging
 
@@ -163,7 +163,7 @@ class TrainRetrieval():
             set_data = data.train_data
             bug_set = data.bug_set
         # we want a constant validation group to have a frame of reference for model performance
-        batch_triplets_valid, valid_input_sample, valid_sim = self.train_preparation.batch_iterator(
+        batch_triplets_valid, valid_input_sample, _, _, _, valid_sim = self.train_preparation.batch_iterator(
                                                                             bug_set, buckets, 
                                                                             set_data,
                                                                             bug_ids,

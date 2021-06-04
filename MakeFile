@@ -1,5 +1,5 @@
-export PYTHONPATH=src
-# set PYTHONPATH=src
+export PYTHONPATH=.
+# set PYTHONPATH=.
 
 test:
 	pipenv run pytest tests

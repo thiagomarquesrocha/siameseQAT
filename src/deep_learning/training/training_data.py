@@ -2,7 +2,7 @@ import os
 import _pickle as pickle
 import numpy as np
 from tqdm import tqdm
-from utils.splitter import Splitter
+from src.utils.splitter import Splitter
 
 class TrainingData:
 

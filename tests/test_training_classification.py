@@ -1,11 +1,11 @@
 import pytest
 import os
 import keras
-from jobs.data_pipeline import DataPipeline
-from utils.keras_utils import KerasUtils
-from deep_learning.training.train_config import TrainConfig
-from deep_learning.training.train_retrieval import TrainRetrieval
-from deep_learning.training.train_classification import TrainClassification
+from src.jobs.data_pipeline import DataPipeline
+from src.utils.keras_utils import KerasUtils
+from src.deep_learning.training.train_config import TrainConfig
+from src.deep_learning.training.train_retrieval import TrainRetrieval
+from src.deep_learning.training.train_classification import TrainClassification
 
 class TestTrainingClassification:
 
@@ -40,6 +40,52 @@ class TestTrainingClassification:
         keras.backend.clear_session()
         del model
         return EPOCHS
+
+    @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
+    def test_classification_prepare_data_then_successful(self, eclipse_test_dataset, retrieval_model):
+        # Retrieval
+        EPOCHS_TRAINED = retrieval_model
+        MODEL_NAME = 'SiameseTA'
+        DIR = eclipse_test_dataset.DIR_OUTPUT
+        DOMAIN = 'eclipse_test'
+        PREPROCESSING = 'bert'
+        retrieval = TrainRetrieval(MODEL_NAME, DIR, DOMAIN, PREPROCESSING, 
+                    MAX_SEQUENCE_LENGTH_T=1, 
+                    MAX_SEQUENCE_LENGTH_D=1,
+                    BERT_LAYERS=1, 
+                    EPOCHS=EPOCHS_TRAINED, 
+                    BATCH_SIZE=1, 
+                    BATCH_SIZE_TEST=1).build()
+
+        retrieval_preload = retrieval.get_model()
+        
+        # Classification
+        MODEL_NAME = 'SiameseTA'
+        DIR = eclipse_test_dataset.DIR_OUTPUT
+        DOMAIN = 'eclipse_test'
+        PREPROCESSING = 'bert'
+        PRETRAINED_MODEL = os.path.join(TrainConfig.OUTPUT_MODELS, TrainConfig.MODEL_NAME.format(PREPROCESSING, MODEL_NAME, EPOCHS_TRAINED, DOMAIN))
+        train = TrainClassification(retrieval_preload, 
+                    MODEL_NAME, 
+                    PRETRAINED_MODEL, 
+                    DIR, DOMAIN, PREPROCESSING, 
+                    EPOCHS=1, 
+                    BATCH_SIZE=4, 
+                    BATCH_SIZE_TEST=4)
+
+        train.pre_load_model()
+        train.prepare_data()
+        train.prepare_validation_data()
+        sample = train.validation_sample
+        assert 'title_token_0' in sample
+        assert 'title_token_1' in sample
+        assert 'title_segment_0' in sample
+        assert 'title_segment_1' in sample
+        assert 'desc_token_0' in sample
+        assert 'desc_token_1' in sample
+        assert 'desc_segment_0' in sample
+        assert 'desc_segment_1' in sample
+        
 
     @pytest.mark.skipif(not os.path.exists('uncased_L-12_H-768_A-12'), reason="does not run without pretrained bert")
     def test_classification_model_preload_then_successful(self, eclipse_test_dataset, retrieval_model):

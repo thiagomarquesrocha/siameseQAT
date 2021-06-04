@@ -49,11 +49,11 @@ $ pip install pipenv
 $ pipenv install
 ```
 
-**Export the directory ```src/``` to ```PYTHONPATH```**
+**Export the root directory ```.``` to ```PYTHONPATH```**
 
 ```
-$ export PYTHONPATH=src # Linux
-$ set PYTHONPATH=src # Windows
+$ export PYTHONPATH=. # Linux
+$ set PYTHONPATH=. # Windows
 ```
 
 **Run tests**

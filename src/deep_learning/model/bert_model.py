@@ -2,8 +2,8 @@ from keras_bert import compile_model, get_model
 from keras_bert import load_trained_model_from_checkpoint
 from keras.layers import Dense, Average, GlobalAveragePooling1D
 from keras.models import Model
-from utils.bert_utils import BertUtils
-from deep_learning.model.model_base import ModelBase
+from src.utils.bert_utils import BertUtils
+from src.deep_learning.model.model_base import ModelBase
 
 class BERTModel(ModelBase):
     

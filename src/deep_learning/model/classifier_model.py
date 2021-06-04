@@ -1,5 +1,5 @@
 from keras.layers import Input
-from utils.util import Util
+from src.utils.util import Util
 
 class ClassifierModel:
 

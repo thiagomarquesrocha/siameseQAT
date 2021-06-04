@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.framework import dtypes
-from deep_learning.loss.pairwise_loss import pairwise_distance, masked_maximum, masked_minimum
+from src.deep_learning.loss.pairwise_loss import pairwise_distance, masked_maximum, masked_minimum
 
 def triplet_loss(vects):
     margin = 1.

@@ -1,5 +1,5 @@
-from evaluation.recall import Recall
-from utils.util import Util
+from src.evaluation.recall import Recall
+from src.utils.util import Util
 from tqdm import tqdm
 from annoy import AnnoyIndex
 import numpy as np

@@ -1,7 +1,7 @@
 import pytest
 import tensorflow as tf
-from deep_learning.loss.triplet_loss import triplet_loss
-from deep_learning.loss.quintet_loss import quintet_loss
+from src.deep_learning.loss.triplet_loss import triplet_loss
+from src.deep_learning.loss.quintet_loss import quintet_loss
 
 class TestDeepLearningLoss:
 

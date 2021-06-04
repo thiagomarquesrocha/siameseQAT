@@ -1,6 +1,6 @@
 import os
-from nlp.tokenizer import Tokenizer
-from utils.util import Util
+from src.nlp.tokenizer import Tokenizer
+from src.utils.util import Util
 from keras_bert import Tokenizer as KerasBertTokenizer
 
 class TokenizerBert(Tokenizer):

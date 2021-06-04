@@ -1,4 +1,4 @@
-from deep_learning.model.classifier_base import ClassifierBase
+from src.deep_learning.model.classifier_base import ClassifierBase
 
 class SiameseQATClassifier:
     

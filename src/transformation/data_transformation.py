@@ -1,5 +1,5 @@
-from nlp.tokenizer import Tokenizer
-from utils.util import Util
+from src.nlp.tokenizer import Tokenizer
+from src.utils.util import Util
 from tqdm import tqdm
 from collections import defaultdict
 import _pickle as pickle

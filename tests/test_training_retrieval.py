@@ -1,7 +1,7 @@
 import pytest
 import os
-from jobs.data_pipeline import DataPipeline
-from deep_learning.training.train_retrieval import TrainRetrieval
+from src.jobs.data_pipeline import DataPipeline
+from src.deep_learning.training.train_retrieval import TrainRetrieval
 
 class TestTrainingTrain:
 

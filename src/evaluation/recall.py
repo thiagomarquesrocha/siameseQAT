@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from utils.util import Util
+from src.utils.util import Util
 
 logger = logging.getLogger('Recall')
 
