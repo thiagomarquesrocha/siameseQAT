@@ -45,5 +45,5 @@ jobs:
           pipenv --where
       - name: Run test suite
         run: |
-          export PYTHONPATH=src
+          export PYTHONPATH=.
           pipenv run pytest -x -ra tests
