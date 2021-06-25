@@ -24,7 +24,7 @@ Some libraries in python environment are required to enable the source code run 
 
 **Download Dataset**
 
-[dataset.rar](https://drive.google.com/file/d/1reRGkmSItk0MJyiefbIjEAEfujAg7JDk/view?usp=sharing)
+[dataset.zip](https://drive.google.com/file/d/1reRGkmSItk0MJyiefbIjEAEfujAg7JDk/view?usp=sharing)
 
 ```
 # Create on root directory /data
