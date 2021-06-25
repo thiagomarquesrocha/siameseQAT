@@ -196,13 +196,16 @@ class Retrieval:
 
         return queries_test_vectorized
 
+    def get_attention_mask(self, arr):
+        return np.array(np.array(arr) > 0.0, int)
+
     def get_embed(self, method, model, title_data, desc_data, info_data, topic_data):
         if method == 'keras':
             embed = model.predict([ np.array(info_data), np.array(desc_data), np.array(title_data) ])
         elif method == 'bert':
-            embed = model.predict([ np.array(info_data), np.zeros_like(desc_data), np.array(desc_data), np.zeros_like(title_data), np.array(title_data) ])
+            embed = model.predict([ np.array(info_data), self.get_attention_mask(desc_data), np.array(desc_data), self.get_attention_mask(title_data), np.array(title_data) ])
         elif method == 'bert-topic':
-            embed = model.predict([ np.array(info_data), np.zeros_like(desc_data), np.array(desc_data), np.array(title_data), np.zeros_like(title_data), np.array(topic_data) ])
+            embed = model.predict([ np.array(info_data), self.get_attention_mask(desc_data), np.array(desc_data), np.array(title_data), self.get_attention_mask(title_data), np.array(topic_data) ])
         elif method == 'dwen':
             embed = model.predict([ np.array(desc_data), np.array(title_data) ])
         

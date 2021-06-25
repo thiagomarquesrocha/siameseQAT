@@ -120,13 +120,30 @@ For each directory will be create files to train, test, vocabulary corpus and ca
 
 #### 3.1 RETRIEVAL EXPERIMENTS ##
 
-To train the models to evaluate in retrieval task the following files need to be executed. All models are trained
-on train.txt file and evaluated using test.txt.
+To train the models to evaluate in retrieval task the following files need to be executed. All models are trained on train.txt file and evaluated using test.txt.
 
-- baseline_dms.ipynb - Train the DMS baseline.
-- baseline_dwen.ipynb - Train the DWEN baseline.
-- SiameseTAT.ipynb - Train the SiameseTAT.
-- SiameseQAT.ipynb - Train the SiameseQAT.
+- Model available:
+    - SiameseTA
+    - SiameseTAT
+    - SiameseQAT-A
+    - SiameseQAT-W
+    - SiameseQA-A
+    - SiameseQA-W
+
+- Parameters available:
+    - **model_name**: Model name to be used. Ex: SiameseQA-A, SiameseQAT-W, SiameseTA
+    - **domain**: Dataset to be used. Ex: eclipse, netbeans, openoffice.
+    - **title_seq**: Title length sequence to be used in model.
+    - **desc_seq**: Description length sequence to be used in model.
+    - **batch_size**: Batch size for training and validation phase.
+    - **epochs**: Number of epochs for training.
+    - **bert_layers**: Number of bert unfrozen layers for training.
+    - **preprocessing**: Type of preprocessing for models. Ex: bert, keras
+
+**Example of how to run retrieval experiment**
+´´´
+mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=SiameseTA -P domain=eclipse_test -P title_seq=1 -P desc_seq=1 -P batch_size=1 -P bert_layers=1
+´´´
 
 #### 3.2 CLASSIFICATION EXPERIMENTS
 
