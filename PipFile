@@ -20,6 +20,7 @@ keras = "==2.2.4"
 numpy = "==1.18.1"
 matplotlib = "==3.0.0"
 annoy = "==1.15.2"
+mlflow = "==1.18.0"
 
 [requires]
 python_version = "3.5"

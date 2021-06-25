@@ -79,7 +79,9 @@ To run the experiments need to preprocess the datasets and the cli.py.
 
 #### 2.1 - Start using CLI
 
+```
 $ python src/cli.py {dataset} no-colab 
+```
 
 The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories:
 
