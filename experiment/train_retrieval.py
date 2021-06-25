@@ -97,20 +97,6 @@ def train_retrieval(model_name, domain, title_seq,
         eprint("Saving encoder")
         save_model(encoder, "encoder_model")
 
-def create_or_get_experiment(client, experiment_name):
-    # Case-sensitive name
-    experiment = mlflow.get_experiment_by_name(experiment_name)
-    if not experiment:
-        exp_id = mlflow.create_experiment(experiment_name)
-    # Set an experiment name, which must be unique and case sensitive.
-    experiment = mlflow.get_experiment_by_name(experiment_name)
-    # Show experiment info
-    print("Name: {}".format(experiment.name))
-    print("Experiment ID: {}".format(experiment.experiment_id))
-    print("Artifact Location: {}".format(experiment.artifact_location))
-    print("Lifecycle_stage: {}".format(experiment.lifecycle_stage))
-    return experiment.experiment_id
-
 def save_model(model, name):
     model_dir = tempfile.mkdtemp()
     model_output = os.path.join(model_dir, "{}.ckpt".format(name))
