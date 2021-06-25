@@ -143,9 +143,9 @@ To train the models to evaluate in retrieval task the following files need to be
 **Example of how to run retrieval experiment**
 
 
-´´´
+```
 mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=SiameseTA -P domain=eclipse_test -P title_seq=1 -P desc_seq=1 -P batch_size=1 -P bert_layers=1
-´´´
+```
 
 #### 3.2 CLASSIFICATION EXPERIMENTS
 
