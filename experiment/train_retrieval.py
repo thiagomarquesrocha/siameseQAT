@@ -6,11 +6,14 @@ import os
 import mlflow
 import click
 import tempfile
+import logging
 from mlflow.utils.logging_utils import eprint
 from src.evaluation.retrieval import Retrieval
 from src.utils.keras_utils import KerasUtils
 from src.deep_learning.training.train_retrieval import TrainRetrieval
 from src.deep_learning.training.train_config import TrainConfig
+
+logging.basicConfig(level=logging.DEBUG)
 
 @click.command(
     help="SiameseQAT script for retrieval experiment"
@@ -27,7 +30,7 @@ def train_retrieval(model_name, domain, title_seq,
                 desc_seq, batch_size, epochs, bert_layers,
                 preprocessing):
 
-    with mlflow.start_run() as active_run:
+    with mlflow.start_run(run_name="retrieval") as active_run:
         dir_input = os.path.join('data', 'processed', domain, preprocessing)
 
         # Save parameters
@@ -89,7 +92,7 @@ def train_retrieval(model_name, domain, title_seq,
         mlflow.log_param("buckets", len(buckets))
 
         mlflow.log_metric("recall_at_25", recall_at_25)
-        mlflow.log_dict(exported_rank, "exported_rank")
+        mlflow.log_dict(exported_rank, "exported_rank.txt")
 
         # Save model
         eprint("Saving model")

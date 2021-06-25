@@ -5,6 +5,7 @@ from src.deep_learning.model.compile_model import compile_model, get_bug_encoder
 from src.evaluation.retrieval import Retrieval
 import math
 import logging
+import mlflow
 
 logger = logging.getLogger('TrainRetrieval')
 
@@ -105,9 +106,12 @@ class TrainRetrieval():
         logger.debug("Train finished!")
 
     def get_epoch_result(self, epoch, **kwargs):
+        step = epoch - 1
         if self.MODEL_NAME == 'SiameseTA' or self.MODEL_NAME == 'SiameseTAT':
             h = kwargs.get('h')
             h_validation = kwargs.get('h_validation')
+            mlflow.log_metric("train_loss", h, step=step)
+            mlflow.log_metric("test_loss", h_validation, step=step)
             return "Epoch: {} - Loss: {:.2f}, Loss_test: {:.2f}".format(epoch, h, h_validation)
         if self.MODEL_NAME == 'SiameseQA-A' or self.MODEL_NAME == 'SiameseQA-W' or self.MODEL_NAME == 'SiameseQAT-A' or self.MODEL_NAME == 'SiameseQAT-W':
             h = kwargs.get('h')
@@ -120,6 +124,16 @@ class TrainRetrieval():
             validation_tl_w_centroid = h_validation[2]
             validation_tl = h_validation[3]
             validation_tl_centroid = h_validation[4]
+            mlflow.log_metric("train_loss", h[0], step=step)
+            mlflow.log_metric("test_loss", h_validation[0], step=step)
+            mlflow.log_metric("train_triplet_loss_w", train_tl_w, step=step)
+            mlflow.log_metric("train_triplet_loss", train_tl, step=step)
+            mlflow.log_metric("train_triplet_loss_centroid", train_tl_centroid, step=step)
+            mlflow.log_metric("train_triplet_loss_centroid_w", train_tl_w_centroid, step=step)
+            mlflow.log_metric("test_triplet_loss_w", validation_tl_w, step=step)
+            mlflow.log_metric("test_triplet_loss", validation_tl, step=step)
+            mlflow.log_metric("test_triplet_loss_centroid", validation_tl_centroid, step=step)
+            mlflow.log_metric("test_triplet_loss_centroid_w", validation_tl_w_centroid, step=step)
             return ("Epoch: {} " + 
               "Train - Loss: {:.2f}, " +
               "TL_w: {:.2f}, TL_centroid_w: {:.2f}, " + 

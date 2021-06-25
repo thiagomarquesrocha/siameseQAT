@@ -141,6 +141,8 @@ To train the models to evaluate in retrieval task the following files need to be
     - **preprocessing**: Type of preprocessing for models. Ex: bert, keras
 
 **Example of how to run retrieval experiment**
+
+
 ´´´
 mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=SiameseTA -P domain=eclipse_test -P title_seq=1 -P desc_seq=1 -P batch_size=1 -P bert_layers=1
 ´´´
