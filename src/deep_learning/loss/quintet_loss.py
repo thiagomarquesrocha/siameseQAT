@@ -1,10 +1,10 @@
-import keras
+from tensorflow import keras
 import tensorflow as tf
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.framework import dtypes
-from keras import backend as K
-from keras.layers import Layer
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Layer
 from src.deep_learning.loss.triplet_loss import triplet_loss
 from src.deep_learning.loss.pairwise_loss import pairwise_distance, \
                                                 masked_maximum, masked_minimum

@@ -1,6 +1,6 @@
 import pytest
 import os
-import keras
+from tensorflow import keras
 from src.jobs.data_pipeline import DataPipeline
 from src.utils.keras_utils import KerasUtils
 from src.deep_learning.training.train_config import TrainConfig

@@ -1,6 +1,6 @@
-from keras.layers import Input, concatenate
-from keras.models import Model
-from keras import backend as K
+from tensorflow.keras.layers import Input, concatenate
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
 from src.deep_learning.model.model_base import ModelBase
 from src.utils.util import Util
 import logging

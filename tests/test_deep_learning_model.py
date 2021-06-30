@@ -1,6 +1,6 @@
 import pytest
 import os
-import keras
+from tensorflow import keras
 from src.deep_learning.model.bert_model import BERTModel
 from src.deep_learning.model.mlp_model import MLPModel
 from src.deep_learning.model.siamese_model import SiameseModel

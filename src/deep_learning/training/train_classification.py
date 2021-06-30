@@ -5,7 +5,7 @@ from src.deep_learning.model.compile_model import compile_model
 from src.deep_learning.model.siameseQAT_classifier import SiameseQATClassifier
 from src.deep_learning.training.training_preparation import TrainingPreparation
 from sklearn.preprocessing import LabelEncoder
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 
 logger = logging.getLogger('TrainClassification')
 

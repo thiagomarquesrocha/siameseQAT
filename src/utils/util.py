@@ -107,6 +107,14 @@ class Util:
         return one_hot
 
     @staticmethod
+    def create_dir(dirName):
+        if not os.path.exists(dirName):
+            os.makedirs(dirName)
+            print("Directory " , dirName ,  " Created ")
+        else:    
+            print("Directory " , dirName ,  " already exists") 
+
+    @staticmethod
     def get_info(bug, info_dict, DOMAIN):
         if DOMAIN != 'firefox':
             info = np.concatenate((

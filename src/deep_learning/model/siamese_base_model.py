@@ -2,8 +2,7 @@ from src.deep_learning.model.bert_model import BERTModel
 from src.deep_learning.model.mlp_model import MLPModel
 from src.deep_learning.model.siamese_model import SiameseModel
 from src.deep_learning.model.model_base import ModelBase
-from keras.models import Model
-import keras
+from tensorflow.keras.models import Model
 
 class SiameseBaseModel():
 

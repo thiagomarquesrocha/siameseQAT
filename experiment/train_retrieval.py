@@ -5,13 +5,15 @@ preprocessed
 import os
 import mlflow
 import click
-import tempfile
 import logging
 from mlflow.utils.logging_utils import eprint
 from src.evaluation.retrieval import Retrieval
 from src.utils.keras_utils import KerasUtils
 from src.deep_learning.training.train_retrieval import TrainRetrieval
 from src.deep_learning.training.train_config import TrainConfig
+import tensorflow as tf
+
+tf.compat.v1.disable_eager_execution()
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -46,66 +48,64 @@ def train_retrieval(model_name, domain, title_seq,
         # Autolog
         mlflow.keras.autolog()
 
-        # Train retrieval model
-        train = TrainRetrieval(model_name, 
-                                dir_input, 
-                                domain, 
-                                preprocessing, 
-                                MAX_SEQUENCE_LENGTH_T=title_seq, 
-                                MAX_SEQUENCE_LENGTH_D=desc_seq,
-                                BERT_LAYERS=bert_layers, 
-                                EPOCHS=epochs, 
-                                BATCH_SIZE=batch_size, 
-                                BATCH_SIZE_TEST=batch_size).run()
-        # Get the model trained
-        model = train.get_model()
-        encoder = train.get_bug_encoder()
+        # https://stackoverflow.com/questions/60354923/how-can-i-handle-the-variable-uninitialized-error-in-tensorflow-v2
+        init = tf.compat.v1.global_variables_initializer()
+        with tf.compat.v1.Session() as sess:
+            sess.run(init)
 
-        data = train.train_preparation.get_data()
-        # Categorical info
-        info_dict = data.info_dict
-        verbose = True
-        retrieval = Retrieval(domain, info_dict, verbose)
-        # Evaluation
-        buckets = data.buckets
-        train = data.train_data
-        test = data.test_data
-        bug_set = data.bug_set
-        issues_by_buckets = data.issues_by_buckets
-        bug_ids = data.bug_test_ids
-        method = 'bert'
-        only_buckets = False # Include all dups
-        
-        recall_at_25, exported_rank, _ = retrieval.evaluate(buckets, 
-                                                          test, 
-                                                          bug_set, 
-                                                          encoder, 
-                                                          issues_by_buckets, 
-                                                          bug_ids, 
-                                                          method=method, 
-                                                          only_buckets=only_buckets)
+            # Train retrieval model
+            train = TrainRetrieval(model_name, 
+                                    dir_input, 
+                                    domain, 
+                                    preprocessing, 
+                                    MAX_SEQUENCE_LENGTH_T=title_seq, 
+                                    MAX_SEQUENCE_LENGTH_D=desc_seq,
+                                    BERT_LAYERS=bert_layers, 
+                                    EPOCHS=epochs, 
+                                    BATCH_SIZE=batch_size, 
+                                    BATCH_SIZE_TEST=batch_size).run()
+            # Get the model trained
+            model = train.get_model()
+            encoder = train.get_bug_encoder()
 
-        # Save result
-        eprint("Saving parameters and metrics")
-        mlflow.log_param("train_pair_size", len(train))
-        mlflow.log_param("test_pair_size", len(test))
-        mlflow.log_param("buckets", len(buckets))
+            data = train.train_preparation.get_data()
+            # Categorical info
+            info_dict = data.info_dict
+            verbose = True
+            retrieval = Retrieval(domain, info_dict, verbose)
+            # Evaluation
+            buckets = data.buckets
+            train = data.train_data
+            test = data.test_data
+            bug_set = data.bug_set
+            issues_by_buckets = data.issues_by_buckets
+            bug_ids = data.bug_test_ids
+            method = 'bert'
+            only_buckets = False # Include all dups
+            
+            recall_at_25, exported_rank, _ = retrieval.evaluate(buckets, 
+                                                            test, 
+                                                            bug_set, 
+                                                            encoder, 
+                                                            issues_by_buckets, 
+                                                            bug_ids, 
+                                                            method=method, 
+                                                            only_buckets=only_buckets)
 
-        mlflow.log_metric("recall_at_25", recall_at_25)
-        mlflow.log_dict(exported_rank, "exported_rank.txt")
+            # Save result
+            eprint("Saving parameters and metrics")
+            mlflow.log_param("train_pair_size", len(train))
+            mlflow.log_param("test_pair_size", len(test))
+            mlflow.log_param("buckets", len(buckets))
 
-        # Save model
-        eprint("Saving model")
-        save_model(model, "retrieval_model")
-        eprint("Saving encoder")
-        save_model(encoder, "encoder_model")
+            mlflow.log_metric("recall_at_25", recall_at_25)
+            mlflow.log_dict(exported_rank, "exported_rank.txt")
 
-def save_model(model, name):
-    model_dir = tempfile.mkdtemp()
-    model_output = os.path.join(model_dir, "{}.ckpt".format(name))
-    KerasUtils.save_weights(model, model_output)
-    mlflow.log_artifact(model_output)
-    os.remove(model_output)
+            # Save model
+            eprint("Saving model")
+            KerasUtils.log_model(model, "retrieval_model")
+            eprint("Saving encoder")
+            KerasUtils.log_model(encoder, "encoder_model")
 
 if __name__ == "__main__":
     train_retrieval()

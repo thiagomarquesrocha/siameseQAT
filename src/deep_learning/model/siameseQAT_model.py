@@ -1,6 +1,6 @@
 import tensorflow as tf
-from keras.layers import Lambda, concatenate
-from keras.models import Model
+from tensorflow.keras.layers import Lambda, concatenate
+from tensorflow.keras.models import Model
 from src.deep_learning.model.siamese_base_model import SiameseBaseModel
 from src.deep_learning.model.model_base import ModelBase
 from src.deep_learning.loss.quintet_loss import quintet_loss, QuintetWeights, \
