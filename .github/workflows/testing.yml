@@ -38,7 +38,7 @@ jobs:
         run: |
           cd /home/runner/work/siameseQAT/siameseQAT
           # pipenv --rm
-          pipenv install --python 3.8 -r requirements.txt
+          pipenv install --pre --python 3.8 -r requirements.txt
       - name: Test env
         run: |
           pipenv --venv
