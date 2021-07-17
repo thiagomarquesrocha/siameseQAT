@@ -155,11 +155,11 @@ To train the models to evaluate in classification task the following files need 
 on train.txt file and evaluated using test.txt.
 
 
-**TBD**: On refactoring to use mlflow 
+**TBD**: Refactoring in development to use mlflow 
 
 ### 4. RESULTS
 
 The following files are used to support analyse the results.
 
 
-**TBD**: ON refactoring to use mlflow 
+**TBD**: Refactoring in development to use mlflow 
