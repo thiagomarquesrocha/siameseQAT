@@ -1,5 +1,5 @@
 """
-Trains a SiameseQAT model for retrieval experiment using bug reports
+Trains a SiameseQAT model for classification experiment using bug reports
 preprocessed
 """
 import os
@@ -27,24 +27,23 @@ logging.basicConfig(level=logging.DEBUG)
 @click.option("--epochs", default=15, type=int, help="Number of epochs for training.")
 def train_classification(run_id_retrieval, domain, batch_size, epochs):
 
-    with mlflow.start_run(run_id=run_id_retrieval, run_name="retrieval") as active_run:
+    retrieval_run = mlflow.get_run(run_id_retrieval)
 
-        tracking_uri = mlflow.get_tracking_uri()
-        print("Current tracking uri: {}".format(tracking_uri))
+    with mlflow.start_run():
 
         # Fetch a specific artifact uri
-        artifact_uri = mlflow.get_artifact_uri(artifact_path="encoder_model/encoder_model.ckpt")
+        artifact_uri = os.path.join(retrieval_run.info.artifact_uri, "encoder_model", "encoder_model.ckpt")
         artifact_uri = artifact_uri[8:]
         print("Artifact uri: {}".format(artifact_uri))
 
-        retrieval_params = active_run.data.params
+        retrieval_params = retrieval_run.data.params
 
         preprocessing = retrieval_params['preprocessing']
 
         dir_input = os.path.join('data', 'processed', domain, )
 
-        print("Data params:", active_run.data.params)
-        print("Data metrics:", active_run.data.metrics)
+        print("Data params:", retrieval_run.data.params)
+        print("Data metrics:", retrieval_run.data.metrics)
 
         # Autolog
         mlflow.keras.autolog()
@@ -86,7 +85,12 @@ def train_classification(run_id_retrieval, domain, batch_size, epochs):
                         BATCH_SIZE=batch_size, 
                         BATCH_SIZE_TEST=batch_size)
 
-            train.run()        
+            train.run()
+
+            model = train.get_model()
+
+            print("Saving classification model")
+            KerasUtils.log_model(model, "classification_model")        
 
 if __name__ == "__main__":
     train_classification()

@@ -156,8 +156,9 @@ on train.txt file and evaluated using test.txt.
 
 **Example of how to run classification experiment**
 
+Note that run_id_retrieval has a already valid id.
+
 ```
-# Note that run_id_retrieval has a already valid id.
 mlflow run . --experiment-name classification -e train_classification -P run_id_retrieval=66f2b01699474634bd9e6559244c4d26 -P domain=eclipse_test -P batch_size=3 -P
 epochs=1
 ```
