@@ -154,16 +154,12 @@ mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=Siames
 To train the models to evaluate in classification task the following files need to be executed. All models are trained
 on train.txt file and evaluated using test.txt.
 
-- classification_baseline_dms.ipynb - Train the DMS.
-- classification_baseline_dwen.ipynb -  Train the DWEN.
-- classification_SiameseQAT_TAT.ipynb - Train the SiameseTAT and SiameseQAT.
+
+**TBD**: Refactoring in development to use mlflow 
 
 ### 4. RESULTS
 
 The following files are used to support analyse the results.
 
-- result.ipynb - See all results of retrieval and classification in tabular format.
-- retrieval.ipynb - Generate the retrieval evaluated separated using the test file for all models.
-- textual_analysis.ipynb - Analyse the vocabulary for all datasets for textual features.
-- buckets_analysis.ipynb - Plot with TSNE the embedding latent space for set of duplicates.
-- dataset_statistics.ipynb - Statistics generated for all datasets.
+
+**TBD**: Refactoring in development to use mlflow 
