@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import mlflow
 from src.utils.keras_utils import KerasUtils
 from src.deep_learning.model.compile_model import compile_model
 from src.deep_learning.model.siameseQAT_classifier import SiameseQATClassifier
@@ -37,7 +38,18 @@ class TrainClassification:
         return self
 
     def train_model(self):
-        pass
+        h = self.model.fit_generator(self.batch_siamese(), 
+                               steps_per_epoch = 10,
+                               validation_data=(self.validation_sample, self.valid_sim),
+                               epochs = self.EPOCHS,
+                               verbose = True)
+        self.save_result(h)
+
+    def save_result(self, h):
+        for key in h.history:
+            score_list = np.array(h.history[key], float)
+            for step, score in enumerate(score_list):
+                mlflow.log_metric(key, score, step=step)
 
     def create_model(self):
         self.model = SiameseQATClassifier(self.model, 
@@ -142,7 +154,7 @@ class TrainClassification:
             validation_sample['topic_0'] = topic_a
             validation_sample['topic_1'] = topic_b
         # Add Label
-        batch_size_normalized = batch_size_test // 2
+        batch_size_normalized = len(info_a) // 2
         pos = np.full((1, batch_size_normalized), 1)
         neg = np.full((1, batch_size_normalized), 0)
         sim = np.concatenate([pos, neg], -1)[0]
