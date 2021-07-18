@@ -9,7 +9,7 @@ class TestDeepLearningLoss:
         vector = tf.constant([[1.0, 1.0, 2.0], [2.0, 3.0, 4.0], [1.0, 1.0, 2.0], 
                  [1.0, 1.0, 2.0], [3.0, 3.0, 4.0], [3.0, 1.0, 2.0]])
         tl = quintet_loss(vector)
-        sess = tf.Session()
+        sess = tf.compat.v1.Session()
         res = sess.run(tl).tolist()
         expected_loss = [0.25, 5.1875] # triplet, triplet_centroid
         assert len(res) == 2
@@ -19,7 +19,7 @@ class TestDeepLearningLoss:
         vector = tf.constant([[1.0, 1.0, 2.0], [2.0, 3.0, 4.0], [1.0, 1.0, 2.0], 
                  [1.0, 1.0, 2.0], [3.0, 3.0, 4.0], [3.0, 1.0, 2.0]])
         tl = triplet_loss(vector)
-        sess = tf.Session()
+        sess = tf.compat.v1.Session()
         res = sess.run(tl)
         expected_loss = 0.25
         assert res == expected_loss

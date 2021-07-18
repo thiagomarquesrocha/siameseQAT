@@ -28,9 +28,9 @@ Some libraries in python environment are required to enable the source code run 
 
 ```
 # Create on root directory /data
-mkdir /data
-# Unrar on root directory /data
-unrar dataset.rar
+-> mkdir /data
+# Unzip on root directory /data
+-> unzip dataset.zip
 # See on data/normalized/
 # - eclipse
 # - openoffice
@@ -70,14 +70,15 @@ $ pipenv run pytest tests
 $ pipenv run pytest --log-cli-level=DEBUG tests
 ```
 
-Jupyter notebook it is required to run the trainings.
+### 2. WORKFLOW
 
+*Image will be done to illustrate the workflow*
 
-### 2. PREPROCESSING
+#### 2.1 PREPROCESSING
 
 To run the experiments need to preprocess the datasets and the cli.py.
 
-#### 2.1 - Start using CLI
+##### Start using CLI
 
 ```
 $ python src/cli.py {dataset} no-colab 
@@ -85,18 +86,18 @@ $ python src/cli.py {dataset} no-colab
 
 The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories:
 
-#### {dataset}
+##### {dataset}
 
 - eclipse
 - netbeans
 - openoffice
 
-##### {preprocessing}
+###### {preprocessing}
 
 - bert
 - baseline
 
-After run the 2.1 command the following directories will be created in root directory:
+After run all previously steps the following directories will be created in root directory:
 
 - data/processed/eclipse
 - data/processed/openoffice
@@ -118,9 +119,9 @@ For each directory will be create files to train, test, vocabulary corpus and ca
 - **product.dic** : dictionary for all bug report products.
 
 
-### 3. EXPERIMENTS
+#### 2.2 EXPERIMENTS
 
-#### 3.1 RETRIEVAL EXPERIMENTS ##
+##### RETRIEVAL EXPERIMENTS ##
 
 To train the models to evaluate in retrieval task the following files need to be executed. All models are trained on train.txt file and evaluated using test.txt.
 
@@ -149,7 +150,7 @@ To train the models to evaluate in retrieval task the following files need to be
 mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=SiameseTA -P domain=eclipse_test -P title_seq=1 -P desc_seq=1 -P batch_size=1 -P bert_layers=1
 ```
 
-#### 3.2 CLASSIFICATION EXPERIMENTS
+##### CLASSIFICATION EXPERIMENTS
 
 To train the models to evaluate in classification task the following files need to be executed. All models are trained
 on train.txt file and evaluated using test.txt.
@@ -163,7 +164,7 @@ mlflow run . --experiment-name classification -e train_classification -P run_id_
 epochs=1
 ```
 
-### 4. RESULTS
+#### 2.3 RESULTS
 
 The following files are used to support analyse the results.
 
