@@ -154,8 +154,13 @@ mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=Siames
 To train the models to evaluate in classification task the following files need to be executed. All models are trained
 on train.txt file and evaluated using test.txt.
 
+**Example of how to run classification experiment**
 
-**TBD**: Refactoring in development to use mlflow 
+```
+# Note that run_id_retrieval has a already valid id.
+mlflow run . --experiment-name classification -e train_classification -P run_id_retrieval=66f2b01699474634bd9e6559244c4d26 -P domain=eclipse_test -P batch_size=3 -P
+epochs=1
+```
 
 ### 4. RESULTS
 
