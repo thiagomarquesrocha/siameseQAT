@@ -123,7 +123,7 @@ For each directory will be create files to train, test, vocabulary corpus and ca
 
 ##### RETRIEVAL EXPERIMENTS ##
 
-To train the models to evaluate in retrieval task the following files need to be executed. All models are trained on train.txt file and evaluated using test.txt.
+To train the model to evaluate in retrieval task run the following command. All models are trained on train.txt file and evaluated using test.txt.
 
 - Model available:
     - SiameseTA
@@ -152,7 +152,7 @@ mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=Siames
 
 ##### CLASSIFICATION EXPERIMENTS
 
-To train the models to evaluate in classification task the following files need to be executed. All models are trained
+To train the model to evaluate in classification task run the following command. Note that all models are trained
 on train.txt file and evaluated using test.txt.
 
 **Example of how to run classification experiment**
