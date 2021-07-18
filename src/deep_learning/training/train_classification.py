@@ -69,9 +69,14 @@ class TrainClassification:
         self.DESC_SIZE = self.get_input_size('desc_token')
         self.TOPIC_SIZE = self.get_input_size('topic')
 
+        print("CATEGORICAL_SIZE=", self.CATEGORICAL_SIZE)
+        print("TITLE_SIZE=", self.TITLE_SIZE)
+        print("DESC_SIZE=", self.DESC_SIZE)
+        print("TOPIC_SIZE=", self.TOPIC_SIZE)
+
     def get_input_size(self, input_name):
         try:
-            return self.model.get_layer(input_name).output_shape[1]
+            return self.model.get_layer(input_name).output_shape[0][1]
         except:
             return self.INVALID_INPUT_SIZE
 
@@ -85,7 +90,6 @@ class TrainClassification:
 
     def generate_batch_data(self, batch_size_test, mode='test'):
         data = self.train_preparation.get_data()
-        categorical_size = data.categorical_size
         buckets = data.buckets
         issues_by_buckets = data.issues_by_buckets
         if mode == 'test':
@@ -98,7 +102,8 @@ class TrainClassification:
             bug_set = data.bug_set
         # we want a constant validation group to have a frame of reference for model performance
         batch_triplets_valid, _, input_sample, input_pos, input_neg, _ = self.train_preparation.batch_iterator(
-                                                                            bug_set, buckets, 
+                                                                            bug_set, 
+                                                                            buckets, 
                                                                             set_data,
                                                                             bug_ids,
                                                                             batch_size_test,

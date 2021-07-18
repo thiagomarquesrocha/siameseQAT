@@ -15,11 +15,12 @@ dependencies:
     - pandas==1.2.5
     - networkx==2.1
     - tqdm==4.32.2
-    - keras-bert==0.88.0
-    - tensorflow==2.5.0
-    - tensorflow-gpu==2.5
+    - keras-bert==0.81.1
+    - keras==2.3.0
+    - tensorflow==2.2.0
     - numpy==1.19.2
     - matplotlib==3.4.2
     - annoy==1.15.2
 variables:
   PYTHONPATH: .
+  TF_KERAS: 1

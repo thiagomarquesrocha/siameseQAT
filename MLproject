@@ -24,18 +24,10 @@ entry_points:
     train_classification:
         parameters:
             run_id_retrieval: {type: string, default: ''}
-            model_name: {type: string, default: 'SiameseQA-A'}
             domain: {type: string, default: 'eclipse'}
-            title_seq: {type: int, default: 30}
-            desc_seq: {type: int, default: 150}
             batch_size: {type: int, default: 64}
             epochs: {type: int, default: 15}
-            bert_layers: {type: int, default: 4}
-            preprocessing: {type: string, default: 'bert'}
         command: "python experiment/train_classification.py
                         --run_id_retrieval {run_id_retrieval} 
-                        --model_name {model_name} --domain {domain} 
-                        --title_seq {title_seq} --desc_seq {desc_seq}
-                        --batch_size {batch_size} --epochs {epochs}
-                        --bert_layers {bert_layers} 
-                        --preprocessing {preprocessing}"
+                        --domain {domain}
+                        --batch_size {batch_size} --epochs {epochs}"

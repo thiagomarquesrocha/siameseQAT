@@ -31,6 +31,14 @@ class QuintetWeights(Layer):
     def compute_output_shape(self, input_shape):
         return [input_shape, input_shape]
 
+    # def get_config(self):
+    #     config = {
+    #         "output_dim": self.output_dim,
+    #         "trainable": self.trainable
+    #     }
+    #     base_config = super(QuintetWeights, self).get_config()
+    #     return dict(list(base_config.items()) + list(config.items()))
+
 def quintet_loss(inputs):
     margin = 1.
     labels = inputs[:, :1]

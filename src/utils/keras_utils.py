@@ -10,6 +10,7 @@ from src.deep_learning.training.train_config import TrainConfig
 from src.deep_learning.loss.quintet_loss import quintet_loss, QuintetWeights, quintet_trainable
 from keras_bert import get_custom_objects
 from tensorflow.keras.models import load_model as keras_load_model
+from tensorflow.keras.layers import Layer, Lambda
 from src.utils.util import Util
 import mlflow
 import tempfile
@@ -30,6 +31,7 @@ class KerasUtils:
         # with open(model_config, "w") as json_file:
         #     json_file.write(model_json)
         KerasUtils.save_weights(model, model_output)
+        #KerasUtils.save_model(model, model_output)
         mlflow.log_artifact(model_dir)
         #custom_objects = get_custom_objects()
         #custom_objects.update({"ModelBase" : ModelBase, "MLPModel" : MLPModel, "BERTModel" : BERTModel, "SiameseModel" : SiameseModel, "quintet_loss" : quintet_loss, "QuintetWeights" : QuintetWeights, "quintet_trainable" : quintet_trainable})
@@ -64,7 +66,9 @@ class KerasUtils:
         if model == 'SiameseQAT-A' or model == 'SiameseQAT-W' or model == 'SiameseQA-A' or model == 'SiameseQA-W' or model == 'SiameseTAT' or model == 'SiameseTA':
             custom_objects = get_custom_objects()
             custom_objects.update(KerasUtils.get_basic_config())
-            return keras_load_model(path, custom_objects=custom_objects)
+            print("Loading:", path)
+            return mlflow.keras.load_model(path, custom_objects=custom_objects)
+            #return keras_load_model(path, custom_objects=custom_objects)
         return 
     
     @staticmethod
@@ -80,7 +84,8 @@ class KerasUtils:
         custom_objects.update(KerasUtils.get_basic_config())
         custom_objects.update(get_custom_objects())
         with keras.utils.custom_object_scope(custom_objects):
-            model.save(export)
+            #model.save(export)
+            mlflow.keras.save_model(model, export)
             if(verbose):
                 logger.debug("Saved model '{}' to disk".format(export))
 
@@ -92,5 +97,7 @@ class KerasUtils:
                 "SiameseModel" : SiameseModel, 
                 "quintet_loss" : quintet_loss,
                 "QuintetWeights" : QuintetWeights,
-                "quintet_trainable" : quintet_trainable
+                "quintet_trainable" : quintet_trainable,
+                "Layer": Layer,
+                "Lambda": Lambda
                 } 
