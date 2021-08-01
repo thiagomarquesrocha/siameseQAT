@@ -15,7 +15,7 @@ from src.transformation.data_transformation import DataTransformation
 logger = logging.getLogger('DataPipeline')
 
 class DataPipeline:
-    def __init__(self, DATASET, DOMAIN, COLAB, 
+    def __init__(self, DATASET, DOMAIN, 
                     PREPROCESSING, VALIDATION_SPLIT=0.9,
                     MAX_SEQUENCE_LENGTH_TITLE=50, MAX_SEQUENCE_LENGTH_DESC=150):
         self.MAX_NB_WORDS = 20000
@@ -23,15 +23,14 @@ class DataPipeline:
         self.MAX_SEQUENCE_LENGTH_D = MAX_SEQUENCE_LENGTH_DESC
         
         self.VALIDATION_SPLIT = VALIDATION_SPLIT
-        self.COLAB = COLAB
         self.PREPROCESSING = PREPROCESSING
         self.DATASET=DATASET
         self.DOMAIN=DOMAIN
 
-        self.TRAIN_OUTPUT = 'train_chronological'
-        self.TEST_OUTPUT = 'test_chronological'
-        self.DIR_OUTPUT = os.path.join('{}data'.format(COLAB), 'processed') # where will be exported
-        self.NORMALIZED_DIR = os.path.join('{}data'.format(self.COLAB), 'normalized', self.DATASET)
+        self.TRAIN_OUTPUT = 'train'
+        self.TEST_OUTPUT = 'test'
+        self.DIR_OUTPUT = os.path.join('data', 'processed') # where will be exported
+        self.NORMALIZED_DIR = os.path.join('data', 'normalized', self.DATASET)
 
     def create_bucket(self, df):
         print("Creating the buckets...")

@@ -43,59 +43,59 @@ Some libraries in python environment are required to enable the source code run 
 $ pip install pipenv
 ```
 
-**Install dependencies**
+**Install mlflow**
+
+```
+$ pip install mlflow==1.18.0
+```
+
+**Download and install BERT-uncased model**
+
+To run all next steps you will need to dowload the BERT pretrained model [uncased_L-12_H-768_A-12](https://github.com/google-research/bert/blob/master/README.md). Then, after download you will need to unpack on root directory.
+
+The expected root directory is:
+
+```
+- uncased_L-12_H-768_A-12
+- src
+- experiment
+- tests
+```
+
+If the ```uncased_L-12_H-768_A-12``` directory is not available may cause problems in next steps.
+
+**Install dependencies (optional)**
 
 ```
 $ pipenv install
 ```
 
-**Export the root directory ```.``` to ```PYTHONPATH```**
-
-```
-$ export PYTHONPATH=. # Linux
-$ set PYTHONPATH=. # Windows
-```
-
-**Run tests**
-
-To run all tests you will need BERT pretrained [uncased_L-12_H-768_A-12](https://github.com/google-research/bert/blob/master/README.md). Download and unpack on root directory.
-
-```
-$ pipenv run pytest tests
-```
-
-**Run tests looking the DEBUG level messages**
-
-```
-$ pipenv run pytest --log-cli-level=DEBUG tests
-```
-
 ### 2. WORKFLOW
 
-*Image will be done to illustrate the workflow*
+![Workflow](https://raw.githubusercontent.com/thiagomarquesrocha/siameseQAT/images/workflow.jpg)
 
 #### 2.1 PREPROCESSING
 
-To run the experiments need to preprocess the datasets and the cli.py.
+To run the experiments is required to preprocess the datasets.
 
-##### Start using CLI
+##### Example of how to run preprocessing
+
+```Parameter: {dataset}```
+
+- dataset=eclipse
+- dataset=netbeans
+- dataset=openoffice
+
+```Parameter: {preprocessor}```
+
+- preprocessor=bert (default)
+- preprocessor=baseline (not working yet)
 
 ```
-$ python src/cli.py {dataset} no-colab 
+mlflow run . --experiment-name preprocessing -e preprocessing -P dataset=eclipse -P preprocessor=bert
 ```
 
-The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories:
-
-##### {dataset}
-
-- eclipse
-- netbeans
-- openoffice
-
-###### {preprocessing}
-
-- bert
-- baseline
+The dataset from [Lazar et al. (2014)](http://alazar.people.ysu.edu/msr14data/) has the following open-source software repositories: eclipse, openoffice and netbeans. 
 
 After run all previously steps the following directories will be created in root directory:
 
@@ -123,7 +123,7 @@ For each directory will be create files to train, test, vocabulary corpus and ca
 
 ##### RETRIEVAL EXPERIMENTS ##
 
-To train the model to evaluate in retrieval task run the following command. All models are trained on train.txt file and evaluated using test.txt.
+To train the model to evaluate in retrieval task run the following command. All models are trained on ```train.txt``` file and evaluated using ```test.txt```.
 
 - Model available:
     - SiameseTA
@@ -153,11 +153,11 @@ mlflow run . --experiment-name retrieval -e train_retrieval -P model_name=Siames
 ##### CLASSIFICATION EXPERIMENTS
 
 To train the model to evaluate in classification task run the following command. Note that all models are trained
-on train.txt file and evaluated using test.txt.
+on ```train.txt``` file and evaluated using  ```test.txt```.
 
 **Example of how to run classification experiment**
 
-Note that run_id_retrieval has a already valid id.
+Note that ```run_id_retrieval``` has a already valid id.
 
 ```
 mlflow run . --experiment-name classification -e train_classification -P run_id_retrieval=66f2b01699474634bd9e6559244c4d26 -P domain=eclipse_test -P batch_size=3 -P
@@ -166,7 +166,36 @@ epochs=1
 
 #### 2.3 RESULTS
 
-The following files are used to support analyse the results.
+All experiments are recorded and available on mlflow UI ```localhost:5000``` after run the command ```mlflow ui``` in terminal. You will see the following experiments tabs:
+
+- retrieval
+- classification
+
+Then, if do you point to any previous execution, the ```run_id``` created through the mlflow can be used to collect the results and their ```artifacts```.
 
 
 **TBD**: Refactoring in development to use mlflow 
+
+
+### Tests
+
+**Export the root directory ```.``` to ```PYTHONPATH```**
+
+```
+$ export PYTHONPATH=. # Linux
+$ set PYTHONPATH=. # Windows
+```
+
+**Run tests**
+
+To run all tests you will need BERT pretrained [uncased_L-12_H-768_A-12](https://github.com/google-research/bert/blob/master/README.md). Download and unpack on root directory.
+
+```
+$ pipenv run pytest tests
+```
+
+**Run tests looking the DEBUG level messages**
+
+```
+$ pipenv run pytest --log-cli-level=DEBUG tests
+```

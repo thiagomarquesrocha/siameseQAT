@@ -3,8 +3,12 @@ name: siameseQAT
 conda_env: conda.yaml
 
 entry_points:
-    main:
-        command: "python main.py"
+    preprocessing:
+        parameters:
+            dataset: {type: string, default: 'eclipse'}
+            preprocessor: {type: string, default: 'bert'}
+        command: "python experiment/preprocessing.py 
+                    --dataset {dataset} --preprocessor {preprocessor}"
     train_retrieval:
         parameters:
             model_name: {type: string, default: 'SiameseQA-A'}
