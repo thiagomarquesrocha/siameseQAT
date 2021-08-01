@@ -72,7 +72,7 @@ $ pipenv install
 
 ### 2. WORKFLOW
 
-![Workflow](https://raw.githubusercontent.com/thiagomarquesrocha/siameseQAT/images/workflow.jpg)
+![Workflow](https://github.com/thiagomarquesrocha/siameseQAT/blob/develop/images/workflow.jpg)
 
 #### 2.1 PREPROCESSING
 
