@@ -126,12 +126,12 @@ For each directory will be create files to train, test, vocabulary corpus and ca
 To train the model to evaluate in retrieval task run the following command. All models are trained on ```train.txt``` file and evaluated using ```test.txt```.
 
 - Model available:
-    - SiameseTA
-    - SiameseTAT
-    - SiameseQAT-A
-    - SiameseQAT-W
-    - SiameseQA-A
-    - SiameseQA-W
+    - model_name=SiameseTA
+    - model_name=SiameseTAT (Not implemented yet)
+    - model_name=SiameseQAT-A (Not implemented yet)
+    - model_name=SiameseQAT-W (Not implemented yet)
+    - model_name=SiameseQA-A
+    - model_name=SiameseQA-W
 
 - Parameters available:
     - **model_name**: Model name to be used. Ex: SiameseQA-A, SiameseQAT-W, SiameseTA
@@ -172,9 +172,6 @@ All experiments are recorded and available on mlflow UI ```localhost:5000``` aft
 - classification
 
 Then, if do you point to any previous execution, the ```run_id``` created through the mlflow can be used to collect the results and their ```artifacts```.
-
-
-**TBD**: Refactoring in development to use mlflow 
 
 
 ### Tests
