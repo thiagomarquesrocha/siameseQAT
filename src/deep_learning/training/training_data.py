@@ -84,8 +84,8 @@ class TrainingData:
 
     def prepare_dataset(self, 
                         DIR, issues_by_buckets, 
-                        path_train='train_chronological', 
-                            path_test='test_chronological'):
+                        path_train='train', 
+                            path_test='test'):
         if not self.bug_set or len(self.bug_set) == 0:
             raise Exception('self.bug_set not initialized')
 
