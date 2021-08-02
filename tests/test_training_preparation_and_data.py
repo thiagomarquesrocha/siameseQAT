@@ -9,9 +9,8 @@ class TestTrainingPreparationAndData:
     def eclipse_test_dataset(self):
         dataset = 'eclipse_test'
         domain = 'eclipse_test'
-        COLAB = ''
         PREPROCESSING = 'fake'
-        pipeline = DataPipeline(dataset, domain, COLAB, PREPROCESSING)
+        pipeline = DataPipeline(dataset, domain, PREPROCESSING)
         pipeline.run()
         return pipeline
 
