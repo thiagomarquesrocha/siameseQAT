@@ -106,8 +106,8 @@ After run all previously steps the following directories will be created in root
 For each directory will be create files to train, test, vocabulary corpus and categorical features from bug reports.
 
 - **bugs/** : a list of pickle objects to save a bug report document in json format. All bugs are saved by id. Ex: 1.pkl, 2.pkl, ..., etc.
-- **train_chronological.txt** : IDs from bugs that will be used for training
-- **test_choronological.txt** : IDs from bugs that will be used for test
+- **train.txt** : IDs from bugs that will be used for training
+- **test.txt** : IDs from bugs that will be used for test
 - **word_vocab_bert.pkl** : dictionary list of words present in dataset saved in pickle format.
 - **bug_ids.txt** : IDs from all bugs in the dataset.
 - **normalized_bugs.json** : All bugs reports saved in json format normalized.
