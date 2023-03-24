@@ -9,4 +9,4 @@ tensorflow==2.2.0
 numpy==1.19.2
 matplotlib==3.4.2
 annoy==1.15.2
-mlflow==1.18.0
+mlflow==2.2.1
